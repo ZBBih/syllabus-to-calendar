@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import Image from "next/image";
 import {
   ART_ALT,
   ART_FOCUS,
@@ -8,7 +8,7 @@ import {
   ART_WIDTH,
   flightOffset,
   type ArtPart,
-} from '@/lib/art'
+} from "@/lib/art";
 
 /**
  * The illustration, assembled on the landing page and cropped everywhere else.
@@ -31,16 +31,19 @@ import {
  * remains afterwards is a few pixels of drift on the dates, enough that the section is not a
  * screenshot.
  */
-export function HeroArt({ className = '' }: { className?: string }) {
+export function HeroArt({ className = "" }: { className?: string }) {
   return (
-    <div className={`art-stage relative ${className}`} style={{ aspectRatio: `${ART_WIDTH} / ${ART_HEIGHT}` }}>
+    <div
+      className={`art-stage relative ${className}`}
+      style={{ aspectRatio: `${ART_WIDTH} / ${ART_HEIGHT}` }}
+    >
       {ART_PIECES.map((piece, i) => {
-        const fly = flightOffset(piece)
+        const fly = flightOffset(piece);
         return (
           <Image
             key={piece.id}
             src={piece.src}
-            alt={piece.id === 'document' ? ART_ALT : ''}
+            alt={piece.id === "document" ? ART_ALT : ""}
             width={piece.px[0]}
             height={piece.px[1]}
             priority={i < 2}
@@ -52,22 +55,33 @@ export function HeroArt({ className = '' }: { className?: string }) {
                 top: `${piece.top}%`,
                 width: `${piece.width}%`,
                 height: `${piece.height}%`,
-                '--fly-x': `${fly.x.toFixed(1)}%`,
-                '--fly-y': `${fly.y.toFixed(1)}%`,
+                "--fly-x": `${fly.x.toFixed(1)}%`,
+                "--fly-y": `${fly.y.toFixed(1)}%`,
               } as React.CSSProperties
             }
           />
-        )
+        );
       })}
-      <span className="art-sweep" aria-hidden="true" />
     </div>
-  )
+  );
 }
 
 /** Half the illustration, squared off, for the smaller spots. */
-export function ArtCrop({ part, className = '', size = 160 }: { part: ArtPart; className?: string; size?: number }) {
+export function ArtCrop({
+  part,
+  className = "",
+  size = 160,
+}: {
+  part: ArtPart;
+  className?: string;
+  size?: number;
+}) {
   return (
-    <div className={`relative shrink-0 overflow-hidden ${className}`} style={{ width: size, height: size }} aria-hidden="true">
+    <div
+      className={`relative shrink-0 overflow-hidden ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
       <Image
         src={ART_SRC}
         alt=""
@@ -75,8 +89,11 @@ export function ArtCrop({ part, className = '', size = 160 }: { part: ArtPart; c
         height={ART_HEIGHT}
         sizes={`${Math.round(size * 2)}px`}
         className="h-full w-full object-cover"
-        style={{ objectPosition: `${ART_FOCUS[part]} 50%`, transform: 'scale(1.9)' }}
+        style={{
+          objectPosition: `${ART_FOCUS[part]} 50%`,
+          transform: "scale(1.9)",
+        }}
       />
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -169,18 +169,10 @@ body {
     box-shadow: 0 0 0 14px transparent;
   }
 }
-@keyframes sweep {
-  from {
-    background-position: 180% 0;
-  }
-  to {
-    background-position: -80% 0;
-  }
-}
 @keyframes paper-in {
   from {
     opacity: 0;
-    transform: translate3d(-26px, 10px, 0) rotate(-2.5deg);
+    transform: translate3d(-20px, 8px, 0);
   }
   to {
     opacity: 1;
@@ -190,19 +182,10 @@ body {
 @keyframes card-fly {
   0% {
     opacity: 0;
-    transform: translate(var(--fly-x), var(--fly-y)) scale(0.5) rotate(-16deg);
+    transform: translate(var(--fly-x), var(--fly-y)) scale(0.86);
   }
-  14% {
+  18% {
     opacity: 1;
-    transform: translate(calc(var(--fly-x) * 0.86), calc(var(--fly-y) * 0.86 - 4%)) scale(0.62) rotate(-13deg);
-  }
-  62% {
-    opacity: 1;
-    transform: translate(calc(var(--fly-x) * 0.3), calc(var(--fly-y) * 0.24 - 9%)) scale(0.9) rotate(-5deg);
-  }
-  84% {
-    opacity: 1;
-    transform: translate3d(0, -5%, 0) scale(1.06) rotate(1.5deg);
   }
   100% {
     opacity: 1;
@@ -210,15 +193,11 @@ body {
   }
 }
 @keyframes calendar-in {
-  0% {
+  from {
     opacity: 0;
-    transform: translate3d(34px, 14px, 0) scale(0.94);
+    transform: translate3d(22px, 8px, 0);
   }
-  72% {
-    opacity: 1;
-    transform: translate3d(0, -3px, 0) scale(1.012);
-  }
-  100% {
+  to {
     opacity: 1;
     transform: none;
   }
@@ -230,14 +209,6 @@ body {
   }
   50% {
     transform: translate3d(0, -3.5px, 0);
-  }
-}
-@keyframes sweep-across {
-  from {
-    transform: translateX(-140%) skewX(-14deg);
-  }
-  to {
-    transform: translateX(240%) skewX(-14deg);
   }
 }
 @keyframes crop-in {
@@ -272,7 +243,7 @@ body {
 @layer components {
   /* Display type is a serif at one weight, so size and spacing carry the hierarchy. */
   .font-display {
-    font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+    font-family: var(--font-display), Georgia, "Times New Roman", serif;
     font-weight: 400;
     letter-spacing: -0.015em;
   }
@@ -398,30 +369,17 @@ body {
     padding: 1.05rem 1.9rem;
     font-size: 1.125rem;
     border-radius: 0.75rem;
-    box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--accent) 75%, transparent);
+    box-shadow: 0 10px 30px -12px
+      color-mix(in oklab, var(--accent) 75%, transparent);
   }
   .btn-hero:hover:not(:disabled) {
-    box-shadow: 0 14px 34px -12px color-mix(in oklab, var(--accent) 85%, transparent);
+    box-shadow: 0 14px 34px -12px
+      color-mix(in oklab, var(--accent) 85%, transparent);
     transform: translateY(-1px);
   }
   .btn-hero:active:not(:disabled) {
     transform: translateY(0) scale(0.99);
   }
-  .btn-hero:not(:disabled)::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.22) 50%, transparent 65%);
-    background-size: 220% 100%;
-    animation: sweep 3.6s ease-in-out 1.2s infinite;
-    pointer-events: none;
-  }
-  .btn-hero {
-    position: relative;
-    overflow: hidden;
-  }
-
   .lift {
     transition:
       transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
@@ -445,8 +403,9 @@ body {
   /*
     The hero is five slices of one render (see lib/art.ts), each put back in its original place
     and each given its own entrance. The paper arrives, the calendar arrives, and then the three
-    dates fly the measured distance between them, left to right. Only the dates keep moving
-    afterwards, and only barely.
+    dates fly the measured distance between them, left to right. No spin, no bounce, no pass of
+    light: the pieces are photographed paper, and anything springy makes them read as UI. Only
+    the dates keep moving afterwards, and only barely.
   */
   .art-stage {
     isolation: isolate;
@@ -457,7 +416,7 @@ body {
     will-change: transform, opacity;
   }
   .art-document {
-    animation: paper-in 0.66s cubic-bezier(0.22, 1, 0.3, 1) 0.05s both;
+    animation: paper-in 0.66s cubic-bezier(0.22, 0.7, 0.28, 1) 0.05s both;
   }
   /*
     The calendar lands before the dates do, so there is somewhere for them to fly to. The two
@@ -465,13 +424,13 @@ body {
     begins once every card has arrived.
   */
   .art-calendar {
-    animation: calendar-in 0.7s cubic-bezier(0.22, 1, 0.3, 1) 0.3s both;
+    animation: calendar-in 0.7s cubic-bezier(0.22, 0.7, 0.28, 1) 0.3s both;
   }
   .art-card1,
   .art-card2,
   .art-card3 {
     animation:
-      card-fly 1.15s cubic-bezier(0.36, 0.02, 0.24, 1) both,
+      card-fly 0.95s cubic-bezier(0.22, 0.65, 0.28, 1) both,
       card-drift 5.5s ease-in-out infinite;
   }
   .art-card1 {
@@ -483,24 +442,6 @@ body {
   .art-card3 {
     animation-delay: 1.32s, 3.7s;
   }
-  .art-sweep {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .art-sweep::before {
-    content: '';
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: 0;
-    width: 26%;
-    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 20%, transparent), transparent);
-    filter: blur(7px);
-    animation: sweep-across 1.05s cubic-bezier(0.4, 0, 0.4, 1) 2.5s 1 both;
-  }
-
   /* The cropped halves, on the classes screen, the export payoff and the 404. */
   .crop-in {
     animation: crop-in 0.45s cubic-bezier(0.22, 1, 0.3, 1) both;
@@ -671,11 +612,9 @@ body {
     .art-card2,
     .art-card3,
     .art-calendar,
-    .art-sweep::before,
     .crop-in,
     .arrow-nudge,
-    .draw-check path,
-    .btn-hero::after {
+    .draw-check path {
       animation: none !important;
     }
     .draw-check path {
@@ -684,9 +623,6 @@ body {
     .art-piece {
       opacity: 1;
       transform: none;
-    }
-    .art-sweep {
-      display: none;
     }
     .crop-in {
       opacity: 1;
@@ -716,8 +652,8 @@ body {
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
       grid-template-areas:
-        'check title title delete'
-        'check date time delete';
+        "check title title delete"
+        "check date time delete";
       gap: 0.35rem 0.5rem;
       align-items: start;
       padding: 0.6rem 0.5rem;
@@ -765,5 +701,4 @@ body {
       border-top: 1px solid var(--line);
     }
   }
-
 }
