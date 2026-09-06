@@ -50,3 +50,21 @@ export const ART_PIECES: ArtPiece[] = [
   { id: 'card3', src: '/art/parts/card3.png', left: 60.5, top: 5.134, width: 16.083, height: 26.786, px: [193, 240] },
   { id: 'calendar', src: '/art/parts/calendar.png', left: 47.5, top: 2.679, width: 51.083, height: 93.638, px: [613, 839] },
 ]
+
+/**
+ * Where a flying date starts: a point on the syllabus, in frame percentages.
+ *
+ * The pieces sit at their final places in the render, so on their own they can only fade in
+ * where they already are. Giving them an origin on the paper is what turns the hero back into a
+ * sequence: a date leaves the syllabus, crosses the gap, and lands on the calendar, which is the
+ * one sentence the product has to make.
+ */
+export const ART_FLIGHT_ORIGIN = { x: 24, y: 52 } as const
+
+/** How far a piece has to travel to reach its place, as a percentage of its own box. */
+export function flightOffset(piece: ArtPiece) {
+  return {
+    x: ((ART_FLIGHT_ORIGIN.x - (piece.left + piece.width / 2)) / piece.width) * 100,
+    y: ((ART_FLIGHT_ORIGIN.y - (piece.top + piece.height / 2)) / piece.height) * 100,
+  }
+}

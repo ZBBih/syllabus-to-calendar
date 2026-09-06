@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ART_FOCUS, ART_HEIGHT, ART_PIECES, ART_SRC, ART_WIDTH } from './art'
+import { ART_FOCUS, ART_HEIGHT, ART_PIECES, ART_SRC, ART_WIDTH, flightOffset } from './art'
 
 describe('the illustration', () => {
   it('points at files that ship in public', () => {
@@ -46,6 +46,30 @@ describe('the illustration', () => {
       // A slice stretched to a box of a different shape would visibly distort the artwork.
       expect(Math.abs(boxAspect - sliceAspect) / sliceAspect).toBeLessThan(0.02)
       expect(frameAspect).toBeGreaterThan(1)
+    }
+  })
+})
+
+describe('flightOffset', () => {
+  it('sends each date back to the syllabus, so it has the gap to cross', () => {
+    for (const piece of ART_PIECES.filter((p) => p.id.startsWith('card'))) {
+      const { x, y } = flightOffset(piece)
+      // Left and down, towards the paper: the dates all sit right of and above it.
+      expect(x).toBeLessThan(-100)
+      expect(y).toBeGreaterThan(100)
+    }
+  })
+
+  it('puts the start on the paper, not off the frame', () => {
+    for (const piece of ART_PIECES.filter((p) => p.id.startsWith('card'))) {
+      const { x, y } = flightOffset(piece)
+      const doc = ART_PIECES.find((p) => p.id === 'document')!
+      const startX = piece.left + (x / 100) * piece.width
+      const startY = piece.top + (y / 100) * piece.height
+      expect(startX).toBeGreaterThan(doc.left)
+      expect(startX + piece.width).toBeLessThan(doc.left + doc.width)
+      expect(startY).toBeGreaterThan(doc.top)
+      expect(startY + piece.height).toBeLessThan(doc.top + doc.height)
     }
   })
 })

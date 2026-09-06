@@ -187,13 +187,22 @@ body {
     transform: none;
   }
 }
-@keyframes card-in {
+@keyframes card-fly {
   0% {
     opacity: 0;
-    transform: translate3d(-42px, 34px, 0) scale(0.7) rotate(-14deg);
+    transform: translate(var(--fly-x), var(--fly-y)) scale(0.5) rotate(-16deg);
   }
-  65% {
+  14% {
     opacity: 1;
+    transform: translate(calc(var(--fly-x) * 0.86), calc(var(--fly-y) * 0.86 - 4%)) scale(0.62) rotate(-13deg);
+  }
+  62% {
+    opacity: 1;
+    transform: translate(calc(var(--fly-x) * 0.3), calc(var(--fly-y) * 0.24 - 9%)) scale(0.9) rotate(-5deg);
+  }
+  84% {
+    opacity: 1;
+    transform: translate3d(0, -5%, 0) scale(1.06) rotate(1.5deg);
   }
   100% {
     opacity: 1;
@@ -435,8 +444,9 @@ body {
 
   /*
     The hero is five slices of one render (see lib/art.ts), each put back in its original place
-    and each given its own entrance. Paper, then the three cut-out dates left to right, then the
-    calendar. Only the dates keep moving afterwards.
+    and each given its own entrance. The paper arrives, the calendar arrives, and then the three
+    dates fly the measured distance between them, left to right. Only the dates keep moving
+    afterwards, and only barely.
   */
   .art-stage {
     isolation: isolate;
@@ -449,24 +459,29 @@ body {
   .art-document {
     animation: paper-in 0.66s cubic-bezier(0.22, 1, 0.3, 1) 0.05s both;
   }
+  /*
+    The calendar lands before the dates do, so there is somewhere for them to fly to. The two
+    animations on each card run in order, not together: the flight, then a slow drift that only
+    begins once every card has arrived.
+  */
+  .art-calendar {
+    animation: calendar-in 0.7s cubic-bezier(0.22, 1, 0.3, 1) 0.3s both;
+  }
   .art-card1,
   .art-card2,
   .art-card3 {
     animation:
-      card-in 0.55s cubic-bezier(0.22, 1, 0.3, 1) both,
+      card-fly 1.15s cubic-bezier(0.36, 0.02, 0.24, 1) both,
       card-drift 5.5s ease-in-out infinite;
   }
   .art-card1 {
-    animation-delay: 0.4s, 2.1s;
+    animation-delay: 0.8s, 3.1s;
   }
   .art-card2 {
-    animation-delay: 0.53s, 2.4s;
+    animation-delay: 1.06s, 3.4s;
   }
   .art-card3 {
-    animation-delay: 0.66s, 2.7s;
-  }
-  .art-calendar {
-    animation: calendar-in 0.7s cubic-bezier(0.22, 1, 0.3, 1) 0.82s both;
+    animation-delay: 1.32s, 3.7s;
   }
   .art-sweep {
     position: absolute;
@@ -483,7 +498,7 @@ body {
     width: 26%;
     background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 20%, transparent), transparent);
     filter: blur(7px);
-    animation: sweep-across 1.05s cubic-bezier(0.4, 0, 0.4, 1) 1.55s 1 both;
+    animation: sweep-across 1.05s cubic-bezier(0.4, 0, 0.4, 1) 2.5s 1 both;
   }
 
   /* The cropped halves, on the classes screen, the export payoff and the 404. */
