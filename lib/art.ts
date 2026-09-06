@@ -1,165 +1,81 @@
 /**
  * The illustration.
  *
- * One cut-paper render, used in five places. The composition puts the syllabus on the left,
- * three cut-out dates in flight across the middle, and the calendar on the right, which is what
- * lets a single piece of art serve the hero, the export payoff, the classes screen, the 404 and
- * the link preview: the smaller spots crop to one half rather than needing art of their own.
+ * Flat shapes in the site's own tokens, drawn as SVG rather than shipped as a picture. A
+ * generated render was tried first and is in git history: it looked good on its own and wrong
+ * on the page, because a photograph of textured paper with real shadows cannot sit on a flat,
+ * crisp interface no matter how carefully its colours are matched. Retoning it only moved the
+ * problem; the style was the problem.
  *
- * Two other styles were rendered and compared in place before this one was chosen. They live in
- * git history rather than in the repo, because carrying unused megabytes is not free and mixing
- * illustration styles is the fastest way to make a site look assembled rather than designed.
+ * Drawing it instead means it inherits light and dark for free, stays sharp at any size, weighs
+ * a couple of kilobytes inside the HTML, and can be taken apart for animation without any
+ * slicing.
  *
- * See docs/illustration.md for where it came from, how its transparency was recovered, and how
- * it was brought onto the site's palette.
+ * The composition is the product in one line: the syllabus on the left, three dates crossing the
+ * middle, the calendar on the right filling in as they arrive. The smaller spots crop to one
+ * half rather than needing art of their own.
  */
 
-/**
- * Where a piece's file lives. Two of everything: the render's own cream is warmer and yellower
- * than this site's paper, and it had no dark version at all, which put two glaring near-white
- * blocks on a near-black page. scripts/tone-art.py maps it onto the palette in both themes.
- *
- * The hero paints these as CSS backgrounds rather than <img>, which is what keeps the second set
- * off the wire: a browser fetches the background the applied rule names, and only that one.
- */
-export function artUrl(id: string, theme: "light" | "dark") {
-  return `/art/toned/${id}-${theme}.webp`;
-}
-
-export const ART_SRC = artUrl("paper", "light");
-export const ART_WIDTH = 1200;
-export const ART_HEIGHT = 896;
 export const ART_ALT =
-  "A paper syllabus on the left, its dates cut out and flying across into a paper calendar on the right";
+  "A syllabus on the left, its dates flying across into a calendar on the right";
 
-/** Where each half sits horizontally, for cropping to the document or the calendar. */
-export const ART_FOCUS = { document: "22%", calendar: "82%" } as const;
-export type ArtPart = keyof typeof ART_FOCUS;
+/** The drawing's own coordinate space. Everything below is in these units. */
+export const ART_WIDTH = 480;
+export const ART_HEIGHT = 360;
 
-/**
- * The five pieces of the picture, so the hero can move them separately.
- *
- * Cut by scripts/slice-art.py, which finds them as connected components and hands every pixel of
- * shadow to whichever piece is nearest. Clipping one flat image into guessed regions got this
- * wrong: the tilted paper reaches further right than it looks, so its top corner landed in the
- * band meant for the flying dates. The boxes below are the real ones, as percentages of the
- * frame, and they include each piece's own shadow.
- */
-export type ArtPiece = {
-  id: string;
-  /** Position and size within the frame, in percent. */
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  /** Natural pixel size of the slice, for next/image. */
-  px: [number, number];
-};
+/** The syllabus. */
+export const SHEET = { x: 12, y: 40, w: 142, h: 280, r: 12 };
 
-export const ART_PIECES: ArtPiece[] = [
-  {
-    id: "document",
-    left: 1.083,
-    top: 5.134,
-    width: 45.583,
-    height: 90.513,
-    px: [547, 811],
-  },
-  {
-    id: "card1",
-    left: 34.667,
-    top: 4.018,
-    width: 13.167,
-    height: 20.759,
-    px: [158, 186],
-  },
-  {
-    id: "card2",
-    left: 49.5,
-    top: 2.679,
-    width: 10.25,
-    height: 20.871,
-    px: [123, 187],
-  },
-  {
-    id: "card3",
-    left: 60.5,
-    top: 5.134,
-    width: 16.083,
-    height: 26.786,
-    px: [193, 240],
-  },
-  {
-    id: "calendar",
-    left: 47.5,
-    top: 2.679,
-    width: 51.083,
-    height: 93.638,
-    px: [613, 839],
-  },
+/** Its printed lines: distance down from the top of the sheet, and how wide. */
+export const SHEET_LINES = [
+  { y: 74, w: 96 },
+  { y: 96, w: 118 },
+  { y: 118, w: 78 },
+  { y: 140, w: 110 },
+  { y: 162, w: 88 },
+  { y: 184, w: 116 },
+  { y: 206, w: 70 },
 ];
 
-/**
- * Where a flying date starts: a point on the syllabus, in frame percentages.
- *
- * The pieces sit at their final places in the render, so on their own they can only fade in
- * where they already are. Giving them an origin on the paper is what turns the hero back into a
- * sequence: a date leaves the syllabus, crosses the gap, and lands on the calendar, which is the
- * one sentence the product has to make.
- */
-export const ART_FLIGHT_ORIGIN = { x: 24, y: 52 } as const;
+/** The calendar. */
+export const CAL = { x: 286, y: 52, w: 182, h: 256, r: 14, header: 46 };
 
-/**
- * The four days the calendar marks, cut out of it so they can be filled in one at a time.
- *
- * The render came with them already coloured, which is the right last frame and the wrong first
- * one: nothing can be shown to *cause* a date to land if the date is there from the start.
- * scripts/cells-art.py lifts the four squares out and patches the holes with a plain day copied
- * from the same row of the same photograph, so the paper grain and the grid's tilt survive.
- */
-export const ART_DAYS: ArtPiece[] = [
-  {
-    id: "day1",
-    left: 77.5,
-    top: 47.433,
-    width: 4.667,
-    height: 6.027,
-    px: [56, 54],
-  },
-  {
-    id: "day2",
-    left: 61.083,
-    top: 52.902,
-    width: 4.833,
-    height: 5.915,
-    px: [58, 53],
-  },
-  {
-    id: "day3",
-    left: 71.333,
-    top: 60.714,
-    width: 4.833,
-    height: 6.027,
-    px: [58, 54],
-  },
-  {
-    id: "day4",
-    left: 81.5,
-    top: 68.75,
-    width: 4.667,
-    height: 5.915,
-    px: [56, 53],
-  },
-];
+/** Its grid of days. */
+export const GRID = { cols: 5, rows: 4, size: 26, gap: 8, top: 74, left: 296 };
 
-/** How far a piece has to travel to reach its place, as a percentage of its own box. */
-export function flightOffset(piece: ArtPiece) {
+export function dayBox(col: number, row: number) {
   return {
-    x:
-      ((ART_FLIGHT_ORIGIN.x - (piece.left + piece.width / 2)) / piece.width) *
-      100,
-    y:
-      ((ART_FLIGHT_ORIGIN.y - (piece.top + piece.height / 2)) / piece.height) *
-      100,
+    x: GRID.left + col * (GRID.size + GRID.gap),
+    y: CAL.y + GRID.top + row * (GRID.size + GRID.gap),
+    size: GRID.size,
   };
 }
+
+/**
+ * The days that get marked, and the date that marks each one.
+ *
+ * Three dates leave the syllabus and three days fill in, one per arrival. A fourth fills at the
+ * end, so the calendar keeps going for a beat after the last one lands rather than stopping dead
+ * with the animation.
+ */
+export const MARKED = [
+  { col: 3, row: 0, chip: 0 },
+  { col: 1, row: 1, chip: 1 },
+  { col: 4, row: 2, chip: 2 },
+  { col: 2, row: 3, chip: null },
+];
+
+/**
+ * The dates in flight, at rest.
+ *
+ * They sit between the two objects, already out of the syllabus and not yet on the calendar,
+ * which is the state the picture has to hold when nothing is moving.
+ */
+export const CHIPS = [
+  { x: 176, y: 92, w: 74, h: 32 },
+  { x: 192, y: 152, w: 74, h: 32 },
+  { x: 178, y: 212, w: 74, h: 32 },
+];
+
+/** Where a date starts: on the sheet, over its own printed line. */
+export const CHIP_ORIGIN = { x: 34, y: 108 };

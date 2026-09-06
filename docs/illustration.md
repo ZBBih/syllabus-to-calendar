@@ -1,138 +1,47 @@
 # The illustration
 
-One cut-paper render, in four places, animated in three parts.
+The syllabus on the left, three dates crossing the middle, the calendar on the right filling in
+as they arrive. It is the product in one line, which is why the same drawing serves the landing
+hero, the classes screen, the export payoff, the 404 and the link preview: the smaller spots
+crop to one half rather than needing art of their own.
 
-## What it is
+It is drawn, not shipped as a picture. `lib/art.ts` holds the geometry, `components/art.tsx`
+draws it, and every colour is a token, so it changes with the theme without a second copy of
+anything, stays sharp at any size, weighs a couple of kilobytes inside the HTML, and comes apart
+for animation without any slicing.
 
-`public/art/paper.png`, 1200 x 896, transparent. A torn paper syllabus on the left, three
-cut-out dates in flight across the middle, a paper calendar on the right.
+## Why not the render
 
-Three styles were generated and compared live on the page before this one was chosen: cut paper,
-soft 3D clay, and flat vector. The other two are in git history at `2a93217`. Cut paper won
-because it is the only one of the three that does not read as generated.
+A generated cut-paper render was built out fully first and is in git history. It looked good on
+its own and wrong on the page, and the work of finding out why is worth recording so it is not
+repeated:
 
-## Recovering the transparency
+- The render arrived with the checkerboard baked in as pixels rather than as transparency, so it
+  had to be recovered by fitting the grid (its period was 23.19px, not a round number),
+  rebuilding the backdrop, and solving for how much each pixel was dimmed.
+- Animating it meant cutting it into pieces. Clipping guessed regions got it wrong, because the
+  tilted paper reached further right than it looked, so a connected-component slicer was needed.
+- The calendar's marked days were coloured in from the first frame, which left nothing for a
+  flying date to cause, so they had to be lifted out and their holes patched.
+- Its cream was `#f8f4e9` against a page of `#fbfaf7`, and it had no dark version, which put two
+  glaring near-white blocks on a near-black screen. Toning it onto the palette meant sorting
+  pixels by material and inverting lightness, and then handling the two things that breaks:
+  shadows becoming halos, and the paper's own shading becoming light rims.
 
-The generator flattened the transparency indicator into the pixels, so all three files arrived
-with a grey checkerboard painted behind the artwork and no alpha channel at all. Dropped onto
-the page as they were, the hero would have shown a grid.
+All of that worked, and none of it fixed the actual problem. A photograph of textured paper with
+real drop shadows cannot sit on a flat, crisp interface, however carefully its colours are
+matched. The style was the mismatch, not the palette.
 
-`scripts/recover-alpha.py` undoes that. The grid is perfectly periodic, which is what makes it
-recoverable:
+## The animation
 
-1. **Fit the grid.** The period is not a round number, about 23.19 px here, so it is measured
-   from the sub-pixel crossings of the square wave along four clean rows and columns. Assuming
-   23 drifts the model out of phase across the frame and leaves the grid opaque at the far edge.
-2. **Rebuild the backdrop** under every pixel, anti-aliased at the cell boundaries.
-3. **Solve for dimming.** For each pixel find the single factor `k` where `pixel ≈ k × backdrop`.
-   Where one factor explains all three channels, the pixel is backdrop or a shadow over it, and
-   its alpha is `1 − k`. This is what keeps the soft drop shadows soft instead of turning them
-   into grey blobs with a checker pattern inside.
-4. **Restrict it to the outside** by keeping only the part of that mask which reaches the border,
-   so pale artwork is never punched through.
-5. **Clean the seams.** The one or two pixel lines where cells meet do not fit the model and
-   survive as thin opaque islands: a faint dashed grid, invisible on a pale page and obvious on
-   a dark one. Anything the model called artwork but which is too small to be artwork is
-   background after all, and a small median over the background region takes the rest.
+The sheet arrives, the calendar arrives, and then the three dates fly the distance from the
+syllabus to their places, one after another, each arrival colouring in a day. The travel and the
+fill are the whole point: a shape that fades in where it already sits reads as a picture
+loading, while a date that leaves one object and changes another reads as the product working.
 
-It needs numpy, scipy and Pillow, and it is not part of the build. Run it once per new render:
+A fourth day fills at the end, so the calendar keeps going for a beat rather than stopping dead
+with the animation. The fill delays are each date's delay plus its flight, so the two cannot
+drift apart unnoticed.
 
-```bash
-python3 scripts/recover-alpha.py <source.png> public/art/paper.png 1200
-python3 scripts/recover-alpha.py <source.png> app/og-art.png 560
-```
-
-If a future render comes back with real transparency, skip all of this and just resize it.
-
-## Where it appears
-
-| Spot | What it shows |
-| --- | --- |
-| Landing hero | The whole picture, in three animated parts |
-| Export success | The calendar half, with the tick badge over its corner |
-| Classes screen, before anything is dropped | The document half |
-| 404 | The document half |
-| Link preview | The whole picture, beside the headline |
-
-The smaller spots crop rather than needing art of their own. `ArtCrop` squares off either half
-using the focus points in `lib/art.ts`.
-
-## Cutting it into moving parts
-
-A flat picture cannot be animated in pieces until it is in pieces. The first attempt clipped one
-image into three guessed regions and got it wrong: the paper is tilted, so it reaches further
-right than it looks, and its top corner landed in the band meant for the flying dates.
-
-`scripts/slice-art.py` does not guess. It finds the pieces as connected components in the alpha
-channel, hands every pixel of shadow to whichever piece is nearest, and writes each one out with
-its box as a percentage of the frame. Specks too small to be a piece, torn edges of the paper
-mostly, are folded into their neighbour rather than dropped. Compositing the five slices back at
-their recorded positions reproduces the original with a maximum per-pixel difference of zero.
-
-```bash
-python3 scripts/slice-art.py public/art/paper.png public/art/parts
-```
-
-It prints the geometry as JSON; paste that into `ART_PIECES` in `lib/art.ts`. Tests check that
-every piece stays inside the frame, that they run paper, dates left to right, then calendar, and
-that no slice is stretched into a box of a different shape than the slice itself.
-
-## How the hero moves
-
-The paper slides in, the three cut-out dates fly across one after another, the calendar lands,
-and a single pass of light closes it. That is the order the product works in and the order the
-picture reads. Afterwards only the dates keep moving, a few pixels on a slow cycle, which is
-enough that the section does not read as a screenshot without competing with the button beside
-it. All of it is off under `prefers-reduced-motion`.
-
-## Weight
-
-Everything is served through `next/image`, which re-encodes and sizes per device. The whole hero,
-all five slices, comes to roughly 80 KB of WebP at the size it is drawn; the cropped halves reuse
-the single full-frame file. The link preview embeds its own 560 px copy and the display font from
-`app/`, because that renderer has no network at build time.
-
-## The calendar fills in
-
-The render arrived with four days already coloured. That is the right last frame and the wrong
-first one: nothing can be shown to *cause* a date to land if the date is there from the start,
-and cause is the only thing the picture has to say.
-
-`scripts/cells-art.py` lifts the four squares out as sprites and patches the holes behind them.
-The patch is a plain day copied from the same row of the same photograph, so the paper grain and
-the grid's tilt come with it rather than being imitated. Which plain day is a coordinate, not a
-guess: the grid is fitted from the four known squares as `centre = origin + col * across + row *
-down`, which reproduces them to within two thirds of a pixel, so any cell in the grid can be
-addressed. Compositing the emptied calendar and the four sprites back at their recorded places
-reproduces the render.
-
-In the hero the days fill one at a time, each on the beat a flying date arrives.
-
-## Onto the site's palette
-
-The render was generated, not designed to a spec, so its colours were its own: a cream at
-`#f8f4e9`, warmer and yellower than the page's `#fbfaf7`, and no dark version at all, which put
-two glaring near-white blocks on a near-black screen. Its green, as it happens, was already
-within a hair of `--accent`.
-
-`scripts/tone-art.py` maps it on. Filtering the whole picture drags every colour along with it,
-so instead the pixels are sorted into the three materials the render actually uses -- paper and
-printing, the marked days and the header, the pin -- and each is mapped onto the token it
-corresponds to. In dark mode neutrals are inverted in lightness rather than dimmed, so a mark
-that is darker than its sheet in daylight is lighter than it at night, which is how the rest of
-the interface behaves.
-
-Two things that inversion gets wrong, and how:
-
-- **Shadows.** They live in the alpha channel as dark pixels. Inverted with the paper, every
-  shape gains a pale halo. So partial alpha is split by brightness: a dark pixel there is shadow
-  and keeps its colour, a bright one is the artwork's own anti-aliased edge and is inverted with
-  the rest, or every shape keeps a cream fringe that only shows against a dark page.
-- **Shading.** The paper's own shaded cut edges are dark, so inverting them outright turns each
-  into a light rim. Only the range the material occupies is inverted; below a knee the curve
-  falls away again, so a shadow stays a shadow. The two halves meet at the same value.
-
-Both themes are written as WebP into `public/art/toned/`. The hero paints them as CSS
-backgrounds rather than `<img>`, which is what keeps the second set off the wire: a browser
-fetches the background named by the rule that applies, and only that one. The untouched renders
-stay in `art/`, outside `public/`, because nothing serves them.
+It plays once and settles, because a loop beside a call to action competes with it, and it is
+off entirely under `prefers-reduced-motion`.

@@ -1,120 +1,80 @@
 import { describe, it, expect } from "vitest";
 import {
-  ART_DAYS,
-  ART_FOCUS,
   ART_HEIGHT,
-  ART_PIECES,
-  ART_SRC,
   ART_WIDTH,
-  artUrl,
-  flightOffset,
+  CAL,
+  CHIPS,
+  CHIP_ORIGIN,
+  GRID,
+  MARKED,
+  SHEET,
+  dayBox,
 } from "./art";
 
 describe("the illustration", () => {
-  it("points at files that ship in public", () => {
-    expect(ART_SRC).toBe("/art/toned/paper-light.webp");
-    expect(ART_WIDTH).toBe(1200);
-    expect(ART_HEIGHT).toBe(896);
-    for (const p of [...ART_PIECES, ...ART_DAYS]) {
-      expect(artUrl(p.id, "light")).toMatch(/^\/art\/toned\/[a-z0-9]+-light\.webp$/);
-      expect(artUrl(p.id, "dark")).toMatch(/^\/art\/toned\/[a-z0-9]+-dark\.webp$/);
+  it("reads left to right: syllabus, dates in transit, calendar", () => {
+    const sheetRight = SHEET.x + SHEET.w;
+    for (const c of CHIPS) {
+      expect(c.x).toBeGreaterThan(sheetRight);
+      expect(c.x + c.w).toBeLessThan(CAL.x);
     }
   });
 
-  it("crops the document from the left half and the calendar from the right", () => {
-    expect(parseInt(ART_FOCUS.document)).toBeLessThan(50);
-    expect(parseInt(ART_FOCUS.calendar)).toBeGreaterThan(50);
+  it("keeps everything inside the frame", () => {
+    const boxes = [
+      { x: SHEET.x, y: SHEET.y, w: SHEET.w, h: SHEET.h },
+      { x: CAL.x, y: CAL.y - 12, w: CAL.w, h: CAL.h + 12 },
+      ...CHIPS,
+    ];
+    for (const b of boxes) {
+      expect(b.x).toBeGreaterThanOrEqual(0);
+      expect(b.y).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.w).toBeLessThanOrEqual(ART_WIDTH);
+      expect(b.y + b.h).toBeLessThanOrEqual(ART_HEIGHT);
+    }
   });
 
-  it("has the paper, three flying dates and the calendar", () => {
-    expect(ART_PIECES.map((p) => p.id)).toEqual([
-      "document",
-      "card1",
-      "card2",
-      "card3",
-      "calendar",
+  it("starts every date on the sheet, so it has the gap to cross", () => {
+    for (let i = 0; i < CHIPS.length; i++) {
+      const x = CHIP_ORIGIN.x;
+      const y = CHIP_ORIGIN.y + i * 34;
+      expect(x).toBeGreaterThan(SHEET.x);
+      expect(x + CHIPS[i].w).toBeLessThan(SHEET.x + SHEET.w);
+      expect(y).toBeGreaterThan(SHEET.y);
+      expect(y + CHIPS[i].h).toBeLessThan(SHEET.y + SHEET.h);
+    }
+  });
+
+  it("fits the grid inside the calendar, below its header", () => {
+    for (let row = 0; row < GRID.rows; row++) {
+      for (let col = 0; col < GRID.cols; col++) {
+        const b = dayBox(col, row);
+        expect(b.x).toBeGreaterThan(CAL.x);
+        expect(b.x + b.size).toBeLessThan(CAL.x + CAL.w);
+        expect(b.y).toBeGreaterThan(CAL.y + CAL.header);
+        expect(b.y + b.size).toBeLessThan(CAL.y + CAL.h);
+      }
+    }
+  });
+
+  it("marks a day for every date in flight, plus one", () => {
+    expect(MARKED).toHaveLength(CHIPS.length + 1);
+    expect(MARKED.filter((m) => m.chip !== null).map((m) => m.chip)).toEqual([
+      0, 1, 2,
     ]);
   });
 
-  it("keeps every piece inside the frame, so nothing is cut off or floats outside it", () => {
-    for (const p of ART_PIECES) {
-      expect(p.left).toBeGreaterThanOrEqual(0);
-      expect(p.top).toBeGreaterThanOrEqual(0);
-      expect(p.left + p.width).toBeLessThanOrEqual(100.01);
-      expect(p.top + p.height).toBeLessThanOrEqual(100.01);
+  it("marks no day twice, and none outside the grid", () => {
+    const seen = new Set(MARKED.map((m) => `${m.col},${m.row}`));
+    expect(seen.size).toBe(MARKED.length);
+    for (const m of MARKED) {
+      expect(m.col).toBeLessThan(GRID.cols);
+      expect(m.row).toBeLessThan(GRID.rows);
     }
   });
 
-  it("places the paper left, the calendar right and the dates between them, left to right", () => {
-    const mid = (id: string) => {
-      const p = ART_PIECES.find((x) => x.id === id)!;
-      return p.left + p.width / 2;
-    };
-    expect(mid("document")).toBeLessThan(mid("card1"));
-    expect(mid("card1")).toBeLessThan(mid("card2"));
-    expect(mid("card2")).toBeLessThan(mid("card3"));
-    expect(mid("document")).toBeLessThan(mid("calendar"));
-  });
-
-  it("gives each slice a natural size that matches the box it is drawn in", () => {
-    const frameAspect = ART_WIDTH / ART_HEIGHT;
-    for (const p of ART_PIECES) {
-      const boxAspect =
-        ((p.width / 100) * ART_WIDTH) / ((p.height / 100) * ART_HEIGHT);
-      const sliceAspect = p.px[0] / p.px[1];
-      // A slice stretched to a box of a different shape would visibly distort the artwork.
-      expect(Math.abs(boxAspect - sliceAspect) / sliceAspect).toBeLessThan(
-        0.02,
-      );
-      expect(frameAspect).toBeGreaterThan(1);
-    }
-  });
-});
-
-describe("flightOffset", () => {
-  it("sends each date back to the syllabus, so it has the gap to cross", () => {
-    for (const piece of ART_PIECES.filter((p) => p.id.startsWith("card"))) {
-      const { x, y } = flightOffset(piece);
-      // Left and down, towards the paper: the dates all sit right of and above it.
-      expect(x).toBeLessThan(-100);
-      expect(y).toBeGreaterThan(100);
-    }
-  });
-
-  it("puts the start on the paper, not off the frame", () => {
-    for (const piece of ART_PIECES.filter((p) => p.id.startsWith("card"))) {
-      const { x, y } = flightOffset(piece);
-      const doc = ART_PIECES.find((p) => p.id === "document")!;
-      const startX = piece.left + (x / 100) * piece.width;
-      const startY = piece.top + (y / 100) * piece.height;
-      expect(startX).toBeGreaterThan(doc.left);
-      expect(startX + piece.width).toBeLessThan(doc.left + doc.width);
-      expect(startY).toBeGreaterThan(doc.top);
-      expect(startY + piece.height).toBeLessThan(doc.top + doc.height);
-    }
-  });
-});
-
-describe("the marked days", () => {
-  const calendar = ART_PIECES.find((p) => p.id === "calendar")!;
-
-  it("sits inside the calendar, so a day cannot fill in mid-air", () => {
-    for (const day of ART_DAYS) {
-      expect(day.left).toBeGreaterThan(calendar.left);
-      expect(day.top).toBeGreaterThan(calendar.top);
-      expect(day.left + day.width).toBeLessThan(calendar.left + calendar.width);
-      expect(day.top + day.height).toBeLessThan(calendar.top + calendar.height);
-    }
-  });
-
-  it("has one day per date in flight, plus one", () => {
-    expect(ART_DAYS).toHaveLength(
-      ART_PIECES.filter((p) => p.id.startsWith("card")).length + 1,
-    );
-  });
-
-  it("reads down the calendar, not in the order the slicer happened to find them", () => {
-    const tops = ART_DAYS.map((d) => d.top);
-    expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+  it("reads down the calendar, so the fills do not jump about", () => {
+    const rows = MARKED.map((m) => m.row);
+    expect([...rows].sort((a, b) => a - b)).toEqual(rows);
   });
 });
