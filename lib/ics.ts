@@ -1,3 +1,5 @@
+import { eventUid, meetingUid } from './uid'
+
 export type CalendarEvent = {
   id: string
   date: string // YYYY-MM-DD
@@ -11,6 +13,8 @@ export type CalendarEvent = {
   origTitle?: string
   /** The syllabus line the event came from, shown as the calendar description. */
   source?: string
+  /** Set when a re-run of the syllabus no longer mentions this row. */
+  missing?: boolean
 }
 
 /** A weekly class meeting, emitted as one recurring event. */
@@ -25,6 +29,16 @@ export type Meeting = {
 export type Weekday = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'
 
 export type CourseEvents = { name: string; events: CalendarEvent[]; meeting?: Meeting | null }
+
+/** One line of the previous export, kept so a later export can withdraw what is gone. */
+export type ExportedEntry = { uid: string; date: string; summary: string }
+
+export type BuildOptions = {
+  /** Bumped on every export. Calendar apps ignore a repeat UID unless SEQUENCE has grown. */
+  sequence?: number
+  /** Events from an earlier export that are no longer wanted; emitted as cancellations. */
+  cancelled?: ExportedEntry[]
+}
 
 export type Reminder = '1d' | '2d' | 'morning' | 'none'
 export const REMINDERS: { value: Reminder; label: string }[] = [
@@ -96,7 +110,27 @@ function stamp() {
   return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
-export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): string {
+export function summaryFor(courseName: string, title: string) {
+  return `${courseName}: ${title}`
+}
+
+/** Everything the next export needs to know about what this one put on the calendar. */
+export function exportedEntries(courses: CourseEvents[]): ExportedEntry[] {
+  const out: ExportedEntry[] = []
+  for (const course of courses) {
+    for (const ev of course.events) {
+      if (ev.include === false) continue
+      out.push({ uid: eventUid(course.name, ev), date: ev.date, summary: summaryFor(course.name, ev.title) })
+    }
+    if (course.meeting && course.meeting.days.length > 0) {
+      out.push({ uid: meetingUid(course.name), date: course.meeting.firstDate, summary: course.name })
+    }
+  }
+  return out
+}
+
+export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', options: BuildOptions = {}): string {
+  const seq = options.sequence ?? 0
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -108,9 +142,12 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
   for (const course of courses) {
     for (const ev of course.events) {
       if (ev.include === false) continue
+      const summary = summaryFor(course.name, ev.title)
       lines.push('BEGIN:VEVENT')
-      lines.push(`UID:${ev.id}@syllabify.app`)
+      lines.push(`UID:${eventUid(course.name, ev)}`)
       lines.push(`DTSTAMP:${now}`)
+      lines.push(`LAST-MODIFIED:${now}`)
+      lines.push(`SEQUENCE:${seq}`)
       if (ev.time) {
         const end = plusHour(ev.date, ev.time)
         lines.push(`DTSTART:${compact(ev.date)}T${ev.time.replace(':', '')}00`)
@@ -119,13 +156,13 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
         lines.push(`DTSTART;VALUE=DATE:${compact(ev.date)}`)
         lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.date))}`)
       }
-      lines.push(`SUMMARY:${escapeIcs(`${course.name}: ${ev.title}`)}`)
+      lines.push(`SUMMARY:${escapeIcs(summary)}`)
       if (ev.source && ev.source.trim() !== ev.title.trim()) lines.push(`DESCRIPTION:${escapeIcs(ev.source.trim())}`)
       const trig = trigger(reminder, !ev.time)
       if (trig) {
         lines.push('BEGIN:VALARM')
         lines.push('ACTION:DISPLAY')
-        lines.push(`DESCRIPTION:${escapeIcs(`${course.name}: ${ev.title}`)}`)
+        lines.push(`DESCRIPTION:${escapeIcs(summary)}`)
         lines.push(`TRIGGER:${trig}`)
         lines.push('END:VALARM')
       }
@@ -136,13 +173,27 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
     const m = course.meeting
     if (!m || m.days.length === 0) continue
     lines.push('BEGIN:VEVENT')
-    lines.push(`UID:meeting-${course.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@syllabify.app`)
+    lines.push(`UID:${meetingUid(course.name)}`)
     lines.push(`DTSTAMP:${now}`)
+    lines.push(`LAST-MODIFIED:${now}`)
+    lines.push(`SEQUENCE:${seq}`)
     lines.push(`DTSTART:${compact(m.firstDate)}T${m.start.replace(':', '')}00`)
     lines.push(`DTEND:${compact(m.firstDate)}T${m.end.replace(':', '')}00`)
     lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${m.days.join(',')};UNTIL=${compact(m.untilDate)}T235959`)
     lines.push(`SUMMARY:${escapeIcs(course.name)}`)
     if (m.location) lines.push(`LOCATION:${escapeIcs(m.location)}`)
+    lines.push('END:VEVENT')
+  }
+  for (const gone of options.cancelled ?? []) {
+    lines.push('BEGIN:VEVENT')
+    lines.push(`UID:${gone.uid}`)
+    lines.push(`DTSTAMP:${now}`)
+    lines.push(`LAST-MODIFIED:${now}`)
+    lines.push(`SEQUENCE:${seq}`)
+    lines.push(`DTSTART;VALUE=DATE:${compact(gone.date)}`)
+    lines.push(`DTEND;VALUE=DATE:${compact(nextDay(gone.date))}`)
+    lines.push(`SUMMARY:${escapeIcs(gone.summary)}`)
+    lines.push('STATUS:CANCELLED')
     lines.push('END:VEVENT')
   }
   lines.push('END:VCALENDAR')

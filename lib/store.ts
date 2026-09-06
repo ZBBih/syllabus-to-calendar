@@ -1,7 +1,8 @@
 import { extractEvents, newId, type ExtractedEvent, type Term } from './extract'
-import { mergeEvents } from './merge'
-import type { Meeting, Reminder } from './ics'
+import { mergeWithDiff, EMPTY_DIFF, type EventDiff } from './merge'
+import type { ExportedEntry, Meeting, Reminder } from './ics'
 import { detectMeeting } from './meeting'
+import { extractWeights, mergeWeights, blankWeight, type Weight } from './grades'
 
 export type Course = {
   id: string
@@ -14,10 +15,25 @@ export type Course = {
   meeting?: Meeting | null
   /** Whether to put the weekly meeting on the calendar. Defaults to true when a meeting exists. */
   meetingIncluded?: boolean
+  /** Grading breakdown from the syllabus, plus whatever scores the student has entered. */
+  weights?: Weight[]
+  /** What the last re-read of this syllabus changed. Cleared once the student has seen it. */
+  diff?: EventDiff
+  /** True when the text came from a photo or screenshot, which is the least reliable input. */
+  viaPhoto?: boolean
 }
 
 export type Step = 1 | 2 | 3
-export type State = { courses: Course[]; reminder: Reminder; step: Step; activeCourseId: string | null }
+export type State = {
+  courses: Course[]
+  reminder: Reminder
+  step: Step
+  activeCourseId: string | null
+  /** Every event the last export put on the calendar, so the next one can withdraw what is gone. */
+  lastExport: ExportedEntry[]
+  /** Grows with each export. Calendar apps ignore a repeated UID unless this has grown too. */
+  exportSequence: number
+}
 
 export type Action =
   | { type: 'add' }
@@ -26,7 +42,7 @@ export type Action =
   | { type: 'setEvents'; id: string; events: ExtractedEvent[] }
   | { type: 'mergeEvents'; id: string; events: ExtractedEvent[] }
   | { type: 'extractAll' }
-  | { type: 'addFromFiles'; files: { name: string; text: string }[] }
+  | { type: 'addFromFiles'; files: { name: string; text: string; viaPhoto?: boolean }[] }
   | { type: 'updateEvent'; courseId: string; eventId: string; patch: Partial<ExtractedEvent> }
   | { type: 'addEvent'; courseId: string }
   | { type: 'deleteEvent'; courseId: string; eventId: string }
@@ -35,6 +51,13 @@ export type Action =
   | { type: 'setActive'; id: string | null }
   | { type: 'setIncludeAll'; courseId: string; include: boolean }
   | { type: 'setMeetingIncluded'; courseId: string; include: boolean }
+  | { type: 'dismissDiff'; courseId: string }
+  | { type: 'dropMissing'; courseId: string }
+  | { type: 'keepMissing'; courseId: string }
+  | { type: 'addWeight'; courseId: string }
+  | { type: 'updateWeight'; courseId: string; weightId: string; patch: Partial<Weight> }
+  | { type: 'removeWeight'; courseId: string; weightId: string }
+  | { type: 'recordExport'; entries: ExportedEntry[] }
   | { type: 'clear' }
   | { type: 'hydrate'; state: State }
 
@@ -50,15 +73,30 @@ export function defaultTerm(now = new Date()): Term {
 }
 
 export function newCourse(): Course {
-  return { id: newId(), name: '', term: defaultTerm(), text: '', events: [], extracted: false, meeting: null, meetingIncluded: true }
+  return { id: newId(), name: '', term: defaultTerm(), text: '', events: [], extracted: false, meeting: null, meetingIncluded: true, weights: [] }
 }
 
 export function initialState(): State {
-  return { courses: [newCourse()], reminder: '1d', step: 1, activeCourseId: null }
+  return { courses: [newCourse()], reminder: '1d', step: 1, activeCourseId: null, lastExport: [], exportSequence: 0 }
 }
 
 function mapCourse(state: State, id: string, fn: (c: Course) => Course): State {
   return { ...state, courses: state.courses.map((c) => (c.id === id ? fn(c) : c)) }
+}
+
+/** Re-read a syllabus into a course: new dates, new meeting, new grading table, and a change report. */
+function reread(course: Course, text: string, term = course.term): Course {
+  const { events, diff } = mergeWithDiff(course.events, extractEvents(text, term))
+  return {
+    ...course,
+    text,
+    term,
+    events,
+    diff,
+    extracted: true,
+    meeting: detectMeeting(text, term),
+    weights: mergeWeights(course.weights ?? [], extractWeights(text)),
+  }
 }
 
 export function reducer(state: State, action: Action): State {
@@ -75,33 +113,31 @@ export function reducer(state: State, action: Action): State {
     case 'setEvents':
       return mapCourse(state, action.id, (c) => ({ ...c, events: action.events, extracted: true }))
     case 'mergeEvents':
-      return mapCourse(state, action.id, (c) => ({
-        ...c,
-        events: mergeEvents(c.events, action.events),
-        extracted: true,
-        meeting: detectMeeting(c.text, c.term),
-      }))
+      return mapCourse(state, action.id, (c) => {
+        const { events, diff } = mergeWithDiff(c.events, action.events)
+        return {
+          ...c,
+          events,
+          diff,
+          extracted: true,
+          meeting: detectMeeting(c.text, c.term),
+          weights: mergeWeights(c.weights ?? [], extractWeights(c.text)),
+        }
+      })
     case 'setMeetingIncluded':
       return mapCourse(state, action.courseId, (c) => ({ ...c, meetingIncluded: action.include }))
     case 'extractAll':
-      return {
-        ...state,
-        courses: state.courses.map((c) =>
-          c.text.trim()
-            ? { ...c, events: mergeEvents(c.events, extractEvents(c.text, c.term)), extracted: true, meeting: detectMeeting(c.text, c.term) }
-            : c,
-        ),
-      }
+      return { ...state, courses: state.courses.map((c) => (c.text.trim() ? reread(c, c.text) : c)) }
     case 'addFromFiles': {
       const courses = [...state.courses]
       let first = true
       for (const f of action.files) {
-        const blank = first && courses.length > 0 && !courses[courses.length - 1].name.trim() && !courses[courses.length - 1].text.trim()
+        const last = courses[courses.length - 1]
+        const blank = first && courses.length > 0 && !last.name.trim() && !last.text.trim()
         first = false
         const base = blank ? courses.pop()! : newCourse()
         const name = base.name.trim() || f.name
-        const events = mergeEvents(base.events, extractEvents(f.text, base.term))
-        courses.push({ ...base, name, text: f.text, events, extracted: true, meeting: detectMeeting(f.text, base.term) })
+        courses.push({ ...reread(base, f.text), name, viaPhoto: f.viaPhoto === true })
       }
       return { ...state, courses }
     }
@@ -122,18 +158,43 @@ export function reducer(state: State, action: Action): State {
       return mapCourse(state, action.courseId, (c) => ({
         ...c,
         extracted: true,
-        events: [
-          ...c.events,
-          { id: newId(), date: '', title: '', confidence: 'high', include: true },
-        ],
+        events: [...c.events, { id: newId(), date: '', title: '', confidence: 'high', include: true }],
       }))
     case 'deleteEvent':
       return mapCourse(state, action.courseId, (c) => ({
         ...c,
         events: c.events.filter((e) => e.id !== action.eventId),
+        diff: c.diff ? { ...c.diff, added: c.diff.added.filter((id) => id !== action.eventId), missing: c.diff.missing.filter((id) => id !== action.eventId) } : c.diff,
       }))
+    case 'dismissDiff':
+      return mapCourse(state, action.courseId, (c) => ({ ...c, diff: EMPTY_DIFF }))
+    case 'dropMissing':
+      return mapCourse(state, action.courseId, (c) => ({
+        ...c,
+        events: c.events.filter((e) => !e.missing),
+        diff: c.diff ? { ...c.diff, missing: [] } : c.diff,
+      }))
+    case 'keepMissing':
+      return mapCourse(state, action.courseId, (c) => ({
+        ...c,
+        events: c.events.map((e) => (e.missing ? { ...e, missing: undefined } : e)),
+        diff: c.diff ? { ...c.diff, missing: [] } : c.diff,
+      }))
+    case 'addWeight':
+      return mapCourse(state, action.courseId, (c) => ({ ...c, weights: [...(c.weights ?? []), blankWeight()] }))
+    case 'updateWeight':
+      return mapCourse(state, action.courseId, (c) => ({
+        ...c,
+        weights: (c.weights ?? []).map((w) => (w.id === action.weightId ? { ...w, ...action.patch } : w)),
+      }))
+    case 'removeWeight':
+      return mapCourse(state, action.courseId, (c) => ({ ...c, weights: (c.weights ?? []).filter((w) => w.id !== action.weightId) }))
+    case 'recordExport':
+      return { ...state, lastExport: action.entries, exportSequence: state.exportSequence + 1 }
     case 'clear':
-      return initialState()
+      // Deliberately keeps the export history: starting over should still update the calendar
+      // that the previous run wrote to, rather than duplicating every event onto it.
+      return { ...initialState(), lastExport: state.lastExport, exportSequence: state.exportSequence }
     case 'hydrate':
       return action.state
   }
@@ -142,6 +203,7 @@ export function reducer(state: State, action: Action): State {
 const SEASONS = new Set(['Fall', 'Spring', 'Summer', 'Winter'])
 const REMINDERS = new Set(['1d', '2d', 'morning', 'none'])
 const isStr = (v: unknown): v is string => typeof v === 'string'
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 function sanitizeEvent(raw: unknown): ExtractedEvent | null {
   if (!raw || typeof raw !== 'object') return null
@@ -158,7 +220,35 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
     origDate: isStr(e.origDate) ? e.origDate : undefined,
     origTitle: isStr(e.origTitle) ? e.origTitle : undefined,
     source: isStr(e.source) ? e.source : undefined,
+    missing: e.missing === true ? true : undefined,
   }
+}
+
+function sanitizeWeight(raw: unknown): Weight | null {
+  if (!raw || typeof raw !== 'object') return null
+  const w = raw as Record<string, unknown>
+  if (!isStr(w.id) || !isStr(w.label) || !isNum(w.weight)) return null
+  return { id: w.id, label: w.label, weight: w.weight, earned: isNum(w.earned) ? w.earned : undefined }
+}
+
+function sanitizeDiff(raw: unknown): EventDiff | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const d = raw as Record<string, unknown>
+  const ids = (v: unknown) => (Array.isArray(v) ? v.filter(isStr) : [])
+  const moved = Array.isArray(d.moved)
+    ? d.moved
+        .map((m) => (m && typeof m === 'object' ? (m as Record<string, unknown>) : null))
+        .filter((m): m is Record<string, unknown> => m !== null && isStr(m.id) && isStr(m.from) && isStr(m.to))
+        .map((m) => ({ id: m.id as string, from: m.from as string, to: m.to as string }))
+    : []
+  return { added: ids(d.added), moved, missing: ids(d.missing) }
+}
+
+function sanitizeEntry(raw: unknown): ExportedEntry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const e = raw as Record<string, unknown>
+  if (!isStr(e.uid) || !isStr(e.date) || !isStr(e.summary)) return null
+  return { uid: e.uid, date: e.date, summary: e.summary }
 }
 
 const DAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])
@@ -181,6 +271,7 @@ function sanitizeCourse(raw: unknown): Course | null {
       ? { season: t.season as Term['season'], year: t.year }
       : defaultTerm()
   const events = Array.isArray(c.events) ? c.events.map(sanitizeEvent).filter((e): e is ExtractedEvent => e !== null) : []
+  const weights = Array.isArray(c.weights) ? c.weights.map(sanitizeWeight).filter((w): w is Weight => w !== null) : []
   return {
     id: c.id,
     name: isStr(c.name) ? c.name : '',
@@ -190,6 +281,9 @@ function sanitizeCourse(raw: unknown): Course | null {
     extracted: c.extracted === true,
     meeting: sanitizeMeeting(c.meeting),
     meetingIncluded: c.meetingIncluded !== false,
+    weights,
+    diff: sanitizeDiff(c.diff),
+    viaPhoto: c.viaPhoto === true ? true : undefined,
   }
 }
 
@@ -203,7 +297,9 @@ export function sanitize(raw: unknown): State | null {
   const reminder = isStr(s.reminder) && REMINDERS.has(s.reminder) ? (s.reminder as Reminder) : '1d'
   const step: Step = s.step === 2 || s.step === 3 ? s.step : 1
   const activeCourseId = isStr(s.activeCourseId) && courses.some((c) => c.id === s.activeCourseId) ? s.activeCourseId : null
-  return { courses, reminder, step, activeCourseId }
+  const lastExport = Array.isArray(s.lastExport) ? s.lastExport.map(sanitizeEntry).filter((e): e is ExportedEntry => e !== null) : []
+  const exportSequence = isNum(s.exportSequence) ? Math.max(0, Math.floor(s.exportSequence)) : 0
+  return { courses, reminder, step, activeCourseId, lastExport, exportSequence }
 }
 
 export function load(): State | null {

@@ -10,6 +10,8 @@ const state: State = {
   step: 2,
   reminder: '1d',
   activeCourseId: null,
+  lastExport: [],
+  exportSequence: 0,
   courses: [
     {
       id: 'c1',
@@ -29,9 +31,9 @@ describe('ReviewStep', () => {
   it('select all / none dispatch setIncludeAll for the active course', () => {
     const dispatch = vi.fn()
     render(<ReviewStep state={state} dispatch={dispatch} />)
-    fireEvent.click(screen.getByRole('button', { name: /select none/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'setIncludeAll', courseId: 'c1', include: false })
-    fireEvent.click(screen.getByRole('button', { name: /select all/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^all$/i }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'setIncludeAll', courseId: 'c1', include: true })
   })
   it('needs-check filter hides confident rows', () => {

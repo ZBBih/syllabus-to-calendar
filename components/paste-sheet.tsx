@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type Dispatch } from 'react'
 import { extractEvents, SEASONS, type Season, type Term } from '@/lib/extract'
 import { defaultTerm, type Action, type Course } from '@/lib/store'
 import { FileDrop } from './file-drop'
+import { X } from './icons'
 import { nameFromFileName } from '@/lib/course-name'
 
 const thisYear = new Date().getFullYear()
@@ -30,7 +31,7 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
       dispatch({ type: 'update', id: course.id, patch: { name: name.trim(), term, text } })
       dispatch({ type: 'mergeEvents', id: course.id, events: extractEvents(text, term) })
     } else {
-      dispatch({ type: 'addFromFiles', files: [{ name: name.trim(), text }] })
+      dispatch({ type: 'addFromFiles', files: [{ name: name.trim(), text, viaPhoto: false }] })
     }
     onClose()
   }
@@ -40,11 +41,11 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
       <div className="sheet-backdrop" onClick={onClose} />
       <div role="dialog" aria-modal="true" aria-labelledby="sheet-title" className="sheet">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="sheet-title" className="font-display text-xl font-extrabold">
+          <h2 id="sheet-title" className="font-display text-xl">
             {course ? 'Edit syllabus text' : 'Add a class by pasting'}
           </h2>
-          <button type="button" onClick={onClose} className="btn btn-ghost px-2 py-1" aria-label="Close">
-            ✕
+          <button type="button" onClick={onClose} className="icon-btn" aria-label="Close">
+            <X size={15} />
           </button>
         </div>
 
@@ -53,7 +54,7 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Class name, e.g. ECON 101" aria-label="Class name" className="field pr-9" />
             {name && (
               <button type="button" className="clear" aria-label="Clear name" onClick={() => setName('')}>
-                ✕
+                <X size={13} />
               </button>
             )}
           </div>
@@ -83,12 +84,12 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={10}
-            placeholder="Paste the syllabus here. The schedule section is all it needs."
+            placeholder="Paste the syllabus here. The schedule section is all it needs, though the grading table is worth including too."
             className="field font-mono text-xs"
           />
           {text && (
-            <button type="button" className="clear !top-3 !translate-y-0" aria-label="Clear text" onClick={() => setText('')}>
-              ✕
+            <button type="button" className="clear !top-2.5 !translate-y-0" aria-label="Clear text" onClick={() => setText('')}>
+              <X size={13} />
             </button>
           )}
         </div>

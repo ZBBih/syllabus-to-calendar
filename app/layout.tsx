@@ -1,16 +1,20 @@
 import type { Metadata, Viewport } from 'next'
-import { Nunito, Geist } from 'next/font/google'
+import { Instrument_Serif, Geist } from 'next/font/google'
 import './globals.css'
 
-const display = Nunito({ variable: '--font-display', subsets: ['latin'], weight: ['700', '800', '900'] })
+// An editorial serif for display against a neutral grotesk for everything else. The previous
+// rounded display face is the default of every generated landing page, which is exactly why
+// the product read as generic before a single word had been changed.
+const display = Instrument_Serif({ variable: '--font-display', subsets: ['latin'], weight: ['400'], style: ['normal', 'italic'] })
 const body = Geist({ variable: '--font-body', subsets: ['latin'] })
 
 const title = 'Syllabify'
-const description = 'Syllabify your semester. Drop your syllabi, get every deadline on your calendar. No account, nothing uploaded.'
+const description =
+  'Drop your syllabi and get every deadline on your calendar. No account, no class limit, and the file never leaves your device.'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://syllabus-to-calendar-ten.vercel.app'),
-  title: { default: title, template: `%s · ${title}` },
+  title: { default: `${title}: syllabus to calendar, no account`, template: `%s · ${title}` },
   description,
   applicationName: title,
   manifest: '/manifest.webmanifest',
@@ -21,8 +25,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fffaf0' },
-    { media: '(prefers-color-scheme: dark)', color: '#16130f' },
+    { media: '(prefers-color-scheme: light)', color: '#fbfaf7' },
+    { media: '(prefers-color-scheme: dark)', color: '#121310' },
   ],
 }
 

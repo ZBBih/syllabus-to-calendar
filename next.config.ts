@@ -2,7 +2,10 @@ import type { NextConfig } from 'next'
 
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
+  // 'wasm-unsafe-eval' is what lets the on-device text recogniser instantiate its WebAssembly
+  // core. It permits WebAssembly compilation only, not eval of JavaScript, so the page still
+  // cannot run injected script.
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

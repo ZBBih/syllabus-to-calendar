@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "vendor:ocr": "node scripts/vendor-ocr.mjs",
+    "predev": "node scripts/vendor-ocr.mjs",
+    "prebuild": "node scripts/vendor-ocr.mjs",
+    "pretest": "node scripts/vendor-ocr.mjs"
   },
   "dependencies": {
     "chrono-node": "^2.10.1",
@@ -15,7 +19,8 @@
     "next": "^16.3.4",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

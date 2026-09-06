@@ -10,6 +10,8 @@ const base: State = {
   step: 3,
   reminder: '1d',
   activeCourseId: null,
+  lastExport: [],
+  exportSequence: 0,
   courses: [
     {
       id: 'c1',
@@ -65,7 +67,7 @@ describe('ExportStep', () => {
     const revoke = vi.fn()
     Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke })
     render(<ExportStep state={state} dispatch={() => {}} />)
-    fireEvent.click(screen.getByRole('button', { name: /download one class/i }))
+    fireEvent.click(screen.getByRole('button', { name: /one class only/i }))
     fireEvent.click(screen.getByRole('button', { name: 'PSYC 200' }))
     expect(create).toHaveBeenCalledTimes(1)
     expect(screen.getByText(/saved psyc-200\.ics/i)).toBeTruthy()

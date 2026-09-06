@@ -11,7 +11,8 @@ describe('Stepper', () => {
     render(<Stepper current={2} done={new Set([1])} onGo={onGo} />)
     const [s1, s2, s3] = screen.getAllByRole('button')
     expect(s2.getAttribute('aria-current')).toBe('step')
-    expect(s1.textContent).toContain('✓')
+    expect(s1.querySelector('svg')).toBeTruthy()  // done steps show a tick, not their number
+    expect(s1.textContent).not.toContain('1')
     fireEvent.click(s1)
     expect(onGo).toHaveBeenCalledWith(1)
     expect((s3 as HTMLButtonElement).disabled).toBe(true)

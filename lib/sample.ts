@@ -1,6 +1,21 @@
 export const SAMPLE_NAME = 'PSYC 101'
 
+/**
+ * The sample is a real demonstration, not filler. It carries a meeting header, a schedule and
+ * a grading table so that one click shows a first-time visitor every part of the app working,
+ * including the weekly class event and the running grade.
+ */
 export const SAMPLE_TEXT = `PSYC 101: Introduction to Psychology
+MWF 10:00-10:50 in Olin 204
+Professor Adeyemi, office hours Thursdays 2-4pm
+
+Grading
+Reading responses 15%
+Quizzes 20%
+Midterm exam 25%
+Group presentation 10%
+Final paper 30%
+
 Course schedule
 
 Week 1  Sept 2   Welcome and the science of mind

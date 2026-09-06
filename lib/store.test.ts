@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { reducer, initialState, defaultTerm, sanitize, type State } from './store'
+import { extractEvents } from './extract'
 
 describe('store', () => {
   it('starts with one course', () => {
@@ -111,5 +112,88 @@ describe('flow state', () => {
     s = reducer(reducer(s, { type: 'add' }), { type: 'setActive', id })
     s = reducer(s, { type: 'remove', id })
     expect(s.activeCourseId).toBeNull()
+  })
+})
+
+const SYL = `PSYC 101
+MWF 10:00-10:50 in Olin 204
+
+Grading
+Homework 40%
+Final exam 60%
+
+Sept 16  Quiz 1
+Oct 14   Midterm exam`
+
+describe('reducer, second pass over a syllabus', () => {
+  it('reads dates, the meeting and the grading table from one dropped file', () => {
+    const s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL }] })
+    const c = s.courses[0]
+    expect(c.events.length).toBeGreaterThanOrEqual(2)
+    expect(c.meeting).toMatchObject({ days: ['MO', 'WE', 'FR'] })
+    expect(c.weights?.map((w) => w.label)).toEqual(['Homework', 'Final exam'])
+    expect(c.viaPhoto).toBe(false)
+  })
+
+  it('marks a class that came from a photo', () => {
+    const s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL, viaPhoto: true }] })
+    expect(s.courses[0].viaPhoto).toBe(true)
+  })
+
+  it('reports what a revised file changed and keeps the entered grade', () => {
+    let s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL }] })
+    const id = s.courses[0].id
+    const homework = s.courses[0].weights![0]
+    s = reducer(s, { type: 'updateWeight', courseId: id, weightId: homework.id, patch: { earned: 88 } })
+
+    const revised = SYL.replace('Oct 14   Midterm exam', 'Oct 21   Midterm exam')
+    s = reducer(s, { type: 'update', id, patch: { text: revised } })
+    s = reducer(s, { type: 'mergeEvents', id, events: extractEvents(revised, s.courses[0].term) })
+
+    expect(s.courses[0].diff!.moved).toHaveLength(1)
+    expect(s.courses[0].weights!.find((w) => w.label === 'Homework')!.earned).toBe(88)
+  })
+
+  it('dismissing the change summary leaves the rows alone', () => {
+    let s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL }] })
+    const id = s.courses[0].id
+    const before = s.courses[0].events.length
+    s = reducer(s, { type: 'dismissDiff', courseId: id })
+    expect(s.courses[0].events).toHaveLength(before)
+    expect(s.courses[0].diff).toEqual({ added: [], moved: [], missing: [] })
+  })
+
+  it('recording an export raises the sequence so the next file is accepted as an update', () => {
+    let s = initialState()
+    s = reducer(s, { type: 'recordExport', entries: [{ uid: 'u', date: '2026-09-14', summary: 'X' }] })
+    expect(s.exportSequence).toBe(1)
+    expect(s.lastExport).toHaveLength(1)
+  })
+
+  it('starting over keeps the export history, so the calendar is corrected rather than duplicated', () => {
+    let s = reducer(initialState(), { type: 'recordExport', entries: [{ uid: 'u', date: '2026-09-14', summary: 'X' }] })
+    s = reducer(s, { type: 'clear' })
+    expect(s.courses).toHaveLength(1)
+    expect(s.lastExport).toHaveLength(1)
+    expect(s.exportSequence).toBe(1)
+  })
+
+  it('survives a round trip through storage with the new fields intact', () => {
+    let s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL, viaPhoto: true }] })
+    s = reducer(s, { type: 'recordExport', entries: [{ uid: 'u', date: '2026-09-14', summary: 'X' }] })
+    const back = sanitize(JSON.parse(JSON.stringify(s)))!
+    expect(back.courses[0].viaPhoto).toBe(true)
+    expect(back.courses[0].weights).toHaveLength(2)
+    expect(back.lastExport).toEqual(s.lastExport)
+    expect(back.exportSequence).toBe(1)
+  })
+
+  it('reads a state saved before these fields existed', () => {
+    const legacy = { courses: [{ id: 'c1', name: 'X', events: [], term: { season: 'Fall', year: 2026 } }], reminder: '1d', step: 1 }
+    const back = sanitize(legacy)!
+    expect(back.exportSequence).toBe(0)
+    expect(back.lastExport).toEqual([])
+    expect(back.courses[0].weights).toEqual([])
+    expect(back.courses[0].viaPhoto).toBeUndefined()
   })
 })

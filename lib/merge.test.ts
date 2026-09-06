@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mergeEvents } from './merge'
+import { mergeEvents, mergeWithDiff, isEmptyDiff } from './merge'
 import type { ExtractedEvent } from './extract'
 
 const ev = (o: Partial<ExtractedEvent>): ExtractedEvent => ({
@@ -49,5 +49,75 @@ describe('mergeEvents', () => {
     const existing = [ev({ id: 'b', date: '2026-10-01', title: 'B' })]
     const fresh = [ev({ id: 'a', date: '2026-09-01', title: 'A', origDate: '2026-09-01', origTitle: 'A' })]
     expect(mergeEvents(existing, fresh).map((e) => e.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('mergeWithDiff', () => {
+  const extracted = (o: Partial<ExtractedEvent>) => ev({ origDate: o.date ?? '2026-09-14', origTitle: o.title ?? 'Quiz 1', source: 'a line', ...o })
+
+  it('reports nothing on a first extraction', () => {
+    const { diff } = mergeWithDiff([], [extracted({ id: 'a' })])
+    expect(isEmptyDiff(diff)).toBe(true)
+  })
+
+  it('recognises a deadline that moved rather than adding a second one', () => {
+    const existing = [extracted({ id: 'a', date: '2026-09-14', title: 'Essay' })]
+    const fresh = [extracted({ id: 'x', date: '2026-09-21', title: 'Essay' })]
+    const { events, diff } = mergeWithDiff(existing, fresh)
+    expect(events).toHaveLength(1)
+    expect(events[0]).toMatchObject({ id: 'a', date: '2026-09-21' })
+    expect(diff.moved).toEqual([{ id: 'a', from: '2026-09-14', to: '2026-09-21' }])
+    expect(diff.added).toEqual([])
+  })
+
+  it('does not overwrite a date the student corrected by hand', () => {
+    const existing = [extracted({ id: 'a', date: '2026-09-16', origDate: '2026-09-14', title: 'Essay' })]
+    const { events, diff } = mergeWithDiff(existing, [extracted({ id: 'x', date: '2026-09-21', title: 'Essay' })])
+    expect(events[0].date).toBe('2026-09-16')
+    expect(diff.moved).toEqual([])
+  })
+
+  it('flags a row the new file no longer mentions instead of deleting it', () => {
+    const existing = [extracted({ id: 'a', title: 'Dropped quiz' }), extracted({ id: 'b', date: '2026-10-01', title: 'Essay' })]
+    const { events, diff } = mergeWithDiff(existing, [extracted({ id: 'x', date: '2026-10-01', title: 'Essay' })])
+    expect(events).toHaveLength(2)
+    expect(diff.missing).toEqual(['a'])
+    expect(events.find((e) => e.id === 'a')!.missing).toBe(true)
+  })
+
+  it('never flags a row the student typed themselves', () => {
+    const existing = [ev({ id: 'mine', title: 'Party', date: '2026-12-01' })]
+    const { diff } = mergeWithDiff(existing, [extracted({ id: 'x' })])
+    expect(diff.missing).toEqual([])
+  })
+
+  it('clears a missing flag when the row comes back', () => {
+    const existing = [extracted({ id: 'a', title: 'Essay', missing: true })]
+    const { events, diff } = mergeWithDiff(existing, [extracted({ id: 'x', title: 'Essay' })])
+    expect(events[0].missing).toBeUndefined()
+    expect(diff.missing).toEqual([])
+  })
+
+  it('keeps two deadlines that share a title apart', () => {
+    const existing = [extracted({ id: 'a', date: '2026-09-14', title: 'Quiz' }), extracted({ id: 'b', date: '2026-10-14', title: 'Quiz' })]
+    const { events, diff } = mergeWithDiff(existing, [
+      extracted({ id: 'x', date: '2026-09-14', title: 'Quiz' }),
+      extracted({ id: 'y', date: '2026-10-14', title: 'Quiz' }),
+    ])
+    expect(events).toHaveLength(2)
+    expect(isEmptyDiff(diff)).toBe(true)
+  })
+
+  it('reports a genuinely new deadline', () => {
+    const existing = [extracted({ id: 'a', title: 'Quiz 1' })]
+    const { events, diff } = mergeWithDiff(existing, [extracted({ id: 'x', title: 'Quiz 1' }), extracted({ id: 'y', date: '2026-11-01', title: 'Final' })])
+    expect(events).toHaveLength(2)
+    expect(diff.added).toEqual(['y'])
+  })
+
+  it('matches titles across punctuation and case', () => {
+    const existing = [extracted({ id: 'a', date: '2026-09-14', title: 'Reading Response #1' })]
+    const { diff } = mergeWithDiff(existing, [extracted({ id: 'x', date: '2026-09-20', title: 'reading response 1' })])
+    expect(diff.moved.map((m) => m.id)).toEqual(['a'])
   })
 })

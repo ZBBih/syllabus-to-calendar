@@ -17,7 +17,7 @@ describe('PasteSheet', () => {
     fireEvent.change(screen.getByPlaceholderText(/paste the syllabus/i), { target: { value: 'Sept 14: Quiz' } })
     expect(add.disabled).toBe(false)
     fireEvent.click(add)
-    expect(dispatch).toHaveBeenCalledWith({ type: 'addFromFiles', files: [{ name: 'ECON 101', text: 'Sept 14: Quiz' }] })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'addFromFiles', files: [{ name: 'ECON 101', text: 'Sept 14: Quiz', viaPhoto: false }] })
     expect(onClose).toHaveBeenCalled()
   })
   it('edits an existing class and merges a re-run', () => {

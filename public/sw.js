@@ -1,4 +1,4 @@
-const CACHE = 'syllabify-v1'
+const CACHE = 'syllabify-v2'
 const SHELL = ['/', '/icon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {
@@ -14,7 +14,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return
-  const isStatic = req.url.includes('/_next/static/')
+  // The recognition model is large and immutable, so it is worth keeping once a photo has been read.
+  const isStatic = req.url.includes('/_next/static/') || req.url.includes('/tesseract/')
   e.respondWith(
     caches.match(req).then((hit) => {
       const network = fetch(req)

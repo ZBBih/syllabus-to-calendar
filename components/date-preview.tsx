@@ -22,23 +22,23 @@ export function DatePreview({ courses }: { courses: Course[] }) {
   if (rows.length === 0) return null
   const clashes = rows.filter((r) => r.clash).length
   return (
-    <div className="card rise p-5 sm:p-6">
+    <div className="card rise p-5">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg font-extrabold">Everything, by date</h3>
+        <h3 className="font-display text-lg">Everything, by date</h3>
         <p className="text-sm text-muted">
           {rows.length} event{rows.length === 1 ? '' : 's'}
-          {clashes > 0 && <span className="ml-2 pill bg-accent-soft text-accent-strong">{clashes} share a day</span>}
+          {clashes > 0 && <span className="pill pill-warn ml-2">{clashes} share a day</span>}
         </p>
       </div>
       <ol className="stagger max-h-72 divide-y divide-line overflow-y-auto text-sm">
         {rows.map((r) => (
           <li key={r.key} className="flex items-baseline gap-3 py-1.5">
-            <span className={`w-28 shrink-0 font-semibold tabular-nums ${r.clash ? 'text-accent-strong' : 'text-muted'}`}>
+            <span className={`w-28 shrink-0 font-semibold tabular-nums ${r.clash ? 'text-warn' : 'text-muted'}`}>
               {fmt.format(new Date(`${r.date}T12:00:00`))}
               {r.time && <span className="ml-1 text-xs font-normal">{r.time}</span>}
             </span>
             <span className="truncate">
-              <span className="font-semibold">{r.course}:</span> {r.title}
+              <span className="font-medium">{r.course}:</span> {r.title}
             </span>
           </li>
         ))}
