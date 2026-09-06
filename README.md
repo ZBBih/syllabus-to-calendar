@@ -6,11 +6,13 @@ Live: https://syllabus-to-calendar-ten.vercel.app
 
 ## How it works
 
-1. **Your classes.** Drop all your syllabi (PDF, Word, or text) on the big zone at the top. Each file becomes a class, named from the file name, with its dates found automatically. Or start with Class 1 by hand: give it a name (this becomes the prefix on every event, e.g. `ECON 101: Midterm`), pick the term, and paste or upload the syllabus. Add more classes with the button below.
-2. **Review dates.** Dates appear in an editable table per class. Rows the app is unsure about are highlighted in yellow. Fix, delete, or add rows as needed. **Re-run** after editing the text keeps your edits and only adds what is new; nothing is ever removed for you.
-3. **Send or download.** On a phone, **Send to my calendar** opens the share sheet so you can add every event in one tap. Anywhere, **Download calendar file** gives you `syllabify.ics` with every included event and a reminder the day before. Tabs below walk through importing into Google Calendar, Apple Calendar, and Outlook.
+Three guided steps, one screen at a time, built for a phone or a laptop.
 
-Your classes are saved in your browser (localStorage) so a refresh does not lose your work. If the browser blocks saving, a banner tells you to download before closing. A reminder select (1 day, 2 days, morning of, none) applies to every event, and a combined by-date list appears when you have more than one class. Light and dark mode, with a toggle in the header.
+1. **Upload.** Drop all your syllabi (PDF, Word, or text) on the big zone. Each file becomes a class row with its name guessed from the file name, a term picker, and a count of the dates found. Fix the name inline (there is a clear button), or use **Add by pasting** to type a class in by hand. **Try a sample** if you have nothing handy.
+2. **Review.** One tab per class. Rows the app is unsure about are amber; a **Needs check** filter shows only those. Select all or none, add rows, or **Edit text** and re-run without losing your edits. **All classes by date** shows every deadline in one list.
+3. **Export.** Pick a reminder lead (1 day, 2 days, morning of, none). On a phone, **Send to my calendar** opens the share sheet. Anywhere, **Download all** gives `syllabify.ics`, or download one class at a time. Import guides for Google, Apple, and Outlook are right there.
+
+Your work is saved in your browser (localStorage) and the app is installable as a PWA that opens offline. Theme follows your system by default, with a Light/Dark override in the header.
 
 ## Run it locally
 
@@ -39,7 +41,9 @@ Next.js 16 (App Router), React 19, Tailwind v4, [chrono-node](https://github.com
 - `lib/course-name.ts` guesses a class name from a file name
 - `lib/ics.ts` turns events into an iCalendar file
 - `lib/store.ts` reducer and localStorage persistence
-- `components/` the three steps of the UI, theme toggle, logo, by-date preview
+- `components/` the three step screens, stepper, class row, paste sheet, theme control, logo, by-date preview
+- `lib/export.ts` combined and per-class calendar files
+- `app/manifest.ts`, `public/sw.js` PWA manifest and offline shell cache
 - `app/icon.svg`, `app/apple-icon.tsx`, `app/opengraph-image.tsx` favicon and link-preview image
 - `app/not-found.tsx` custom 404
 - `docs/superpowers/` design spec and implementation plan
