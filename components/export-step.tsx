@@ -145,7 +145,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
           {done ? (
             <>
               <div className="pop-in relative mx-auto w-fit">
-                <ArtCrop part="calendar" size={148} />
+                <ArtCrop part="calendar" size={148} className="crop-in" />
                 <span className="ring-once absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink">
                   <span className="draw-check">
                     <Check size={20} />

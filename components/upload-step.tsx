@@ -40,7 +40,7 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
               <h1 className="h1">Drop your syllabi</h1>
               <p className="lede mt-2">Each file becomes a class. Every date, meeting and grading table gets pulled out while you watch.</p>
             </div>
-            <ArtCrop part="document" size={112} className="rise hidden shrink-0 sm:block" />
+            <ArtCrop part="document" size={112} className="crop-in hidden sm:block" />
           </div>
         </>
       ) : (

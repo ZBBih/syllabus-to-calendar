@@ -1,8 +1,17 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 
 export const alt = 'Syllabify: every deadline on your calendar, without an account'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
+
+// The renderer cannot reach the network at build time, so both the illustration and the display
+// face are read off disk. Without the font the heading falls back to a system sans, which is not
+// the face the site uses and makes a shared link look like a different product. Both files sit
+// under app/ so neither is served as a public asset.
+const art = `data:image/png;base64,${readFileSync(join(process.cwd(), 'app', 'og-art.png')).toString('base64')}`
+const display = readFileSync(join(process.cwd(), 'app', 'og-display.ttf'))
 
 export default function OpenGraphImage() {
   return new ImageResponse(
@@ -12,53 +21,41 @@ export default function OpenGraphImage() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '72px 80px',
+          alignItems: 'center',
+          padding: '0 72px',
           background: '#fbfaf7',
           color: '#191813',
-          fontFamily: 'serif',
+          fontFamily: 'Instrument Serif',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <svg width="64" height="64" viewBox="0 0 64 64">
-            <rect width="64" height="64" rx="16" fill="#0d7a5c" />
-            <rect x="11" y="17" width="42" height="36" rx="7" fill="#ffffff" />
-            <rect x="19" y="9" width="6" height="14" rx="3" fill="#ffffff" />
-            <rect x="39" y="9" width="6" height="14" rx="3" fill="#ffffff" />
-            <path d="M21 36 L29 44 L44 26" fill="none" stroke="#0d7a5c" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <div style={{ fontSize: 40, letterSpacing: -1 }}>Syllabify</div>
+        <div style={{ display: 'flex', flexDirection: 'column', width: 620 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <svg width="46" height="46" viewBox="0 0 64 64">
+              <rect width="64" height="64" rx="16" fill="#0d7a5c" />
+              <rect x="11" y="17" width="42" height="36" rx="7" fill="#ffffff" />
+              <rect x="19" y="9" width="6" height="14" rx="3" fill="#ffffff" />
+              <rect x="39" y="9" width="6" height="14" rx="3" fill="#ffffff" />
+              <path d="M21 36 L29 44 L44 26" fill="none" stroke="#0d7a5c" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div style={{ fontSize: 34, letterSpacing: -0.5 }}>Syllabify</div>
+          </div>
+
+          <div style={{ fontSize: 66, lineHeight: 1.04, letterSpacing: -2, marginTop: 26 }}>Your whole semester, on your calendar, in one minute.</div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 30, fontFamily: 'sans-serif', fontSize: 20 }}>
+            {['No account', 'Nothing uploaded', 'Free'].map((t) => (
+              <div key={t} style={{ display: 'flex', padding: '9px 16px', borderRadius: 9, background: '#ddf2ea', color: '#0d7a5c', fontWeight: 600 }}>
+                {t}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 88, lineHeight: 1.05, letterSpacing: -2, maxWidth: 900 }}>
-            Every deadline on your calendar before the first week is over.
-          </div>
-          <div style={{ fontSize: 32, marginTop: 28, color: '#6e6a60', fontFamily: 'sans-serif' }}>
-            Drop your syllabi. Check what it found. Send it to your calendar.
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 14, fontFamily: 'sans-serif', fontSize: 24 }}>
-          {['No account', 'Nothing uploaded', 'No class limit', 'Free'].map((t) => (
-            <div
-              key={t}
-              style={{
-                display: 'flex',
-                padding: '10px 20px',
-                borderRadius: 10,
-                background: '#ddf2ea',
-                color: '#0d7a5c',
-                fontWeight: 600,
-              }}
-            >
-              {t}
-            </div>
-          ))}
+        <div style={{ display: 'flex', flex: 1, justifyContent: 'flex-end' }}>
+          <img src={art} alt="" width={420} height={314} />
         </div>
       </div>
     ),
-    size,
+    { ...size, fonts: [{ name: 'Instrument Serif', data: display, weight: 400, style: 'normal' }] },
   )
 }

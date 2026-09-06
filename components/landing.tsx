@@ -3,7 +3,7 @@
 import type { Dispatch } from 'react'
 import type { Action } from '@/lib/store'
 import { SAMPLE_NAME, SAMPLE_TEXT } from '@/lib/sample'
-import { ArtPicker, HeroArt } from './art'
+import { HeroArt } from './art'
 import { HowItWorks } from './how-it-works'
 import { SupportLink } from './site-links'
 import { ArrowRight, Check, Infinite, Lock, X } from './icons'
@@ -64,10 +64,7 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
           <p className="mt-3.5 text-sm text-muted">Free forever. No sign-up. Nothing to install.</p>
         </div>
 
-        <div className="order-first lg:order-none">
-          <HeroArt />
-          <ArtPicker className="mt-4" />
-        </div>
+        <HeroArt className="order-first lg:order-none" />
       </section>
 
       <div className="mt-16">

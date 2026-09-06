@@ -94,12 +94,6 @@ export const Infinite = (p: Props) => (
   </Svg>
 )
 
-export const Chart = (p: Props) => (
-  <Svg {...p}>
-    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-  </Svg>
-)
-
 export const Chevron = ({ open = false, ...p }: Props & { open?: boolean }) => (
   <Svg {...p} className={`${p.className ?? ''} transition-transform ${open ? 'rotate-90' : ''}`}>
     <path d="m9 5 7 7-7 7" />
@@ -116,13 +110,6 @@ export const Alert = (p: Props) => (
   <Svg {...p}>
     <path d="M12 3 2 20h20z" />
     <path d="M12 10v4M12 17.5v.01" />
-  </Svg>
-)
-
-export const Mail = (p: Props) => (
-  <Svg {...p}>
-    <rect x="3" y="5" width="18" height="14" rx="2" />
-    <path d="m3 7 9 6 9-6" />
   </Svg>
 )
 

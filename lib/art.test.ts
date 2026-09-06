@@ -1,32 +1,51 @@
 import { describe, it, expect } from 'vitest'
-import { ART, ART_ORDER, DEFAULT_ART, isArtStyle } from './art'
+import { ART_FOCUS, ART_HEIGHT, ART_PIECES, ART_SRC, ART_WIDTH } from './art'
 
-describe('art variants', () => {
-  it('has one entry per style in the picker order', () => {
-    expect(ART_ORDER).toHaveLength(3)
-    for (const id of ART_ORDER) expect(ART[id].id).toBe(id)
+describe('the illustration', () => {
+  it('points at files that ship in public', () => {
+    expect(ART_SRC).toBe('/art/paper.png')
+    expect(ART_WIDTH).toBe(1200)
+    expect(ART_HEIGHT).toBe(896)
+    for (const p of ART_PIECES) expect(p.src).toMatch(/^\/art\/parts\/[a-z0-9]+\.png$/)
   })
 
-  it('points every variant at a file under public/art', () => {
-    for (const id of ART_ORDER) expect(ART[id].src).toMatch(/^\/art\/[a-z]+\.png$/)
+  it('crops the document from the left half and the calendar from the right', () => {
+    expect(parseInt(ART_FOCUS.document)).toBeLessThan(50)
+    expect(parseInt(ART_FOCUS.calendar)).toBeGreaterThan(50)
   })
 
-  it('gives each variant its own crop points, since the compositions differ', () => {
-    for (const id of ART_ORDER) {
-      expect(ART[id].documentX).toMatch(/^\d+%$/)
-      expect(ART[id].calendarX).toMatch(/^\d+%$/)
-      expect(parseInt(ART[id].documentX)).toBeLessThan(parseInt(ART[id].calendarX))
+  it('has the paper, three flying dates and the calendar', () => {
+    expect(ART_PIECES.map((p) => p.id)).toEqual(['document', 'card1', 'card2', 'card3', 'calendar'])
+  })
+
+  it('keeps every piece inside the frame, so nothing is cut off or floats outside it', () => {
+    for (const p of ART_PIECES) {
+      expect(p.left).toBeGreaterThanOrEqual(0)
+      expect(p.top).toBeGreaterThanOrEqual(0)
+      expect(p.left + p.width).toBeLessThanOrEqual(100.01)
+      expect(p.top + p.height).toBeLessThanOrEqual(100.01)
     }
   })
 
-  it('defaults to a style that exists', () => {
-    expect(ART[DEFAULT_ART]).toBeDefined()
+  it('places the paper left, the calendar right and the dates between them, left to right', () => {
+    const mid = (id: string) => {
+      const p = ART_PIECES.find((x) => x.id === id)!
+      return p.left + p.width / 2
+    }
+    expect(mid('document')).toBeLessThan(mid('card1'))
+    expect(mid('card1')).toBeLessThan(mid('card2'))
+    expect(mid('card2')).toBeLessThan(mid('card3'))
+    expect(mid('document')).toBeLessThan(mid('calendar'))
   })
 
-  it('rejects anything that is not a known style, so a stale saved value cannot break the page', () => {
-    expect(isArtStyle('paper')).toBe(true)
-    expect(isArtStyle('watercolour')).toBe(false)
-    expect(isArtStyle(null)).toBe(false)
-    expect(isArtStyle(3)).toBe(false)
+  it('gives each slice a natural size that matches the box it is drawn in', () => {
+    const frameAspect = ART_WIDTH / ART_HEIGHT
+    for (const p of ART_PIECES) {
+      const boxAspect = (p.width / 100) * ART_WIDTH / ((p.height / 100) * ART_HEIGHT)
+      const sliceAspect = p.px[0] / p.px[1]
+      // A slice stretched to a box of a different shape would visibly distort the artwork.
+      expect(Math.abs(boxAspect - sliceAspect) / sliceAspect).toBeLessThan(0.02)
+      expect(frameAspect).toBeGreaterThan(1)
+    }
   })
 })
