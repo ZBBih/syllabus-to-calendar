@@ -50,3 +50,30 @@ Drop the PNG in `public/` and tell me which one. I replace the body of `componen
 - a barely-there float so the section is never completely dead
 
 If you send layers as separate transparent PNGs, paper and calendar and cards apart, I can move them independently and it will look considerably better than a single flat image. Worth asking the tool for if it offers it.
+
+---
+
+## Where the three ended up
+
+All three renders are in `public/art` and all three are live. A picker under the hero on the
+landing page switches between them, and the choice is remembered in the browser, so they can
+be compared in place rather than side by side in a folder.
+
+Every render shares the same composition, syllabus left and calendar right, which is what lets
+one file serve three spots. `ArtCrop` squares off either half:
+
+| Spot | What it shows |
+| --- | --- |
+| Landing hero | The full picture, wiped in left to right with one pass of light |
+| Export success | The calendar half, with the tick badge over the corner |
+| Classes screen, before anything is dropped | The document half |
+| 404 | The document half |
+
+The crop points differ per render because the three compositions are spaced differently; they
+live in `documentX` and `calendarX` in `lib/art.ts`.
+
+Files are 1200 x 896 PNGs served through `next/image`, which re-encodes them per device. The
+1.3 MB source comes down to about 30 KB of WebP at the size the hero actually uses.
+
+**To settle on one:** say which, and I set `DEFAULT_ART` in `lib/art.ts`, delete `ArtPicker`
+and the two unused files. Nothing else changes.

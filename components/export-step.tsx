@@ -6,6 +6,7 @@ import type { Action, State } from '@/lib/store'
 import { exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
 import { previewRows } from './date-preview'
 import { Confetti } from './confetti'
+import { ArtCrop } from './art'
 import { ArrowLeft, Check, Upload } from './icons'
 
 const GUIDES = {
@@ -143,9 +144,12 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
         <div className="border-b border-line bg-accent-soft/60 px-5 py-7 text-center sm:px-8 sm:py-9">
           {done ? (
             <>
-              <div className="ring-once mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-ink">
-                <span className="draw-check">
-                  <Check size={26} />
+              <div className="pop-in relative mx-auto w-fit">
+                <ArtCrop part="calendar" size={148} />
+                <span className="ring-once absolute -bottom-1 -right-1 flex h-10 w-10 items-center justify-center rounded-full bg-accent text-accent-ink">
+                  <span className="draw-check">
+                    <Check size={20} />
+                  </span>
                 </span>
               </div>
               <p className="mt-4 font-display text-2xl">Done.</p>

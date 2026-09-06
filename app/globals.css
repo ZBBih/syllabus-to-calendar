@@ -177,48 +177,22 @@ body {
     background-position: -80% 0;
   }
 }
-@keyframes fly-across {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.7);
-  }
-  12% {
-    opacity: 1;
-    transform: translate(8px, -2px) scale(1);
-  }
-  70% {
-    opacity: 1;
-    transform: translate(112px, -22px) scale(1);
-  }
-  86% {
-    opacity: 0;
-    transform: translate(132px, -28px) scale(0.75);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(132px, -28px) scale(0.75);
-  }
-}
-@keyframes grow-line {
+@keyframes wipe-in {
   from {
-    transform: scaleX(0);
+    clip-path: inset(0 100% 0 0);
+    opacity: 0;
   }
   to {
-    transform: scaleX(1);
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
   }
 }
-@keyframes cell-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.4);
+@keyframes sweep-across {
+  from {
+    transform: translateX(-140%) skewX(-14deg);
   }
-  65% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
+  to {
+    transform: translateX(240%) skewX(-14deg);
   }
 }
 @keyframes nudge-x {
@@ -413,20 +387,32 @@ body {
     animation: float-y 4s ease-in-out infinite;
   }
 
-  /* Hero illustration. The whole sequence loops slowly so the page never sits fully still. */
-  .hero-art .art-line {
-    transform-origin: 28px center;
-    animation: grow-line 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  /*
+    The illustration is a flat picture, so it is revealed rather than assembled: a wipe left to
+    right, in the direction the composition reads, then one pass of light across it. Both run
+    once. A loop beside a call to action just competes with it.
+  */
+  .art-reveal {
+    animation: wipe-in 0.85s cubic-bezier(0.22, 1, 0.3, 1) 0.1s both;
   }
-  /* Plays once and settles. A loop that never stops pulls the eye off the button. */
-  .hero-art .art-chip {
-    animation: fly-across 1.5s cubic-bezier(0.4, 0, 0.3, 1) 1 both;
+  .art-reveal .art-sweep {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
   }
-  .hero-art .art-cell {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: cell-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  .art-reveal .art-sweep::before {
+    content: '';
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: 0;
+    width: 28%;
+    background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--accent) 22%, transparent), transparent);
+    filter: blur(6px);
+    animation: sweep-across 1.1s cubic-bezier(0.4, 0, 0.4, 1) 1s 1 both;
   }
+
   .arrow-nudge {
     animation: nudge-x 2.4s ease-in-out 3;
   }
@@ -587,9 +573,8 @@ body {
     .pop-in,
     .ring-once,
     .float,
-    .hero-art .art-line,
-    .hero-art .art-chip,
-    .hero-art .art-cell,
+    .art-reveal,
+    .art-reveal .art-sweep::before,
     .arrow-nudge,
     .draw-check path,
     .btn-hero::after {
@@ -598,13 +583,12 @@ body {
     .draw-check path {
       stroke-dashoffset: 0;
     }
-    .hero-art .art-chip {
-      opacity: 0;
-    }
-    .hero-art .art-line,
-    .hero-art .art-cell {
+    .art-reveal {
+      clip-path: none;
       opacity: 1;
-      transform: none;
+    }
+    .art-reveal .art-sweep {
+      display: none;
     }
     .btn,
     .field,
