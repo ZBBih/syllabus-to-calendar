@@ -142,14 +142,18 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
               <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-secondary">
-                  Download it again
+                  Save the file again
                 </button>
                 {canShare && (
                   <button type="button" onClick={share} disabled={!ready} className="btn btn-secondary">
-                    Send to my calendar
+                    Open the share sheet again
                   </button>
                 )}
               </div>
+              <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-muted">
+                Both hand over the same file. The share sheet passes it straight to an app on this phone; saving puts it in Downloads so you can open it
+                yourself or move it to another device.
+              </p>
             </>
           ) : (
             <>
@@ -165,14 +169,22 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                     <button type="button" onClick={share} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
                       <Upload size={18} /> Send to my calendar
                     </button>
+                    <p className="max-w-sm text-xs leading-relaxed text-muted">
+                      Opens your phone&apos;s share sheet, where you pick Calendar and tap Add All.
+                    </p>
                     <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-ghost btn-sm">
-                      or download the file
+                      or just save the file
                     </button>
                   </>
                 ) : (
-                  <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
-                    <Upload size={18} /> Download my calendar
-                  </button>
+                  <>
+                    <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
+                      <Upload size={18} /> Download my calendar
+                    </button>
+                    <p className="max-w-sm text-xs leading-relaxed text-muted">
+                      Saves syllabify.ics to Downloads. Opening it imports every date at once.
+                    </p>
+                  </>
                 )}
               </div>
             </>
@@ -195,14 +207,8 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
             </select>
           </label>
 
-          <div className="relative ml-auto">
-            <button
-              type="button"
-              disabled={!ready || courses.length < 2}
-              onClick={() => setMenu((v) => !v)}
-              aria-expanded={menu}
-              className="btn btn-secondary btn-sm"
-            >
+          <div className={`relative ml-auto ${courses.length < 2 ? 'hidden' : ''}`}>
+            <button type="button" disabled={!ready} onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="btn btn-secondary btn-sm">
               One class only
             </button>
             {menu && (

@@ -98,7 +98,13 @@ html.dark {
 body {
   background: var(--paper);
   color: var(--fg);
+  font-size: 15.5px;
   -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 640px) {
+  body {
+    font-size: 16px;
+  }
 }
 
 ::selection {
@@ -171,6 +177,59 @@ body {
     background-position: -80% 0;
   }
 }
+@keyframes fly-across {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.7);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(8px, -2px) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(112px, -22px) scale(1);
+  }
+  86% {
+    opacity: 0;
+    transform: translate(132px, -28px) scale(0.75);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(132px, -28px) scale(0.75);
+  }
+}
+@keyframes grow-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes cell-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes nudge-x {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
 @keyframes float-y {
   0%,
   100% {
@@ -192,20 +251,27 @@ body {
   .h1 {
     font-family: var(--font-display), Georgia, serif;
     font-weight: 400;
-    font-size: clamp(2rem, 6vw, 2.75rem);
-    line-height: 1.08;
+    font-size: clamp(2.25rem, 6vw, 3.25rem);
+    line-height: 1.06;
     letter-spacing: -0.02em;
+  }
+  .h-display {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2.75rem, 8vw, 4.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
   }
 
   .lede {
     color: var(--muted);
-    font-size: 1rem;
-    line-height: 1.55;
-    max-width: 46ch;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    max-width: 52ch;
   }
 
   .eyebrow {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -253,9 +319,9 @@ body {
     justify-content: center;
     gap: 0.45rem;
     border-radius: 0.5rem;
-    padding: 0.5rem 0.9rem;
+    padding: 0.6rem 1.05rem;
     font-weight: 600;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
     line-height: 1.2;
     white-space: nowrap;
     transition:
@@ -295,13 +361,13 @@ body {
     background: color-mix(in oklab, var(--fg) 6%, transparent);
   }
   .btn-sm {
-    padding: 0.3rem 0.6rem;
-    font-size: 0.8125rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8438rem;
   }
   /* The one button on the export screen that everything else is leading up to. */
   .btn-hero {
-    padding: 0.95rem 1.6rem;
-    font-size: 1.0625rem;
+    padding: 1.05rem 1.9rem;
+    font-size: 1.125rem;
     border-radius: 0.75rem;
     box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--accent) 75%, transparent);
   }
@@ -347,6 +413,23 @@ body {
     animation: float-y 4s ease-in-out infinite;
   }
 
+  /* Hero illustration. The whole sequence loops slowly so the page never sits fully still. */
+  .hero-art .art-line {
+    transform-origin: 28px center;
+    animation: grow-line 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .hero-art .art-chip {
+    animation: fly-across 1.6s cubic-bezier(0.4, 0, 0.3, 1) infinite both;
+  }
+  .hero-art .art-cell {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: cell-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .arrow-nudge {
+    animation: nudge-x 2.4s ease-in-out infinite;
+  }
+
   /* The finished tick on the export screen draws itself once. */
   .draw-check path {
     stroke-dasharray: 32;
@@ -369,8 +452,8 @@ body {
     border: 1px solid var(--line-strong);
     background: var(--elev);
     color: var(--fg);
-    padding: 0.45rem 0.65rem;
-    font-size: 0.875rem;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.9375rem;
     transition:
       border-color 0.15s,
       box-shadow 0.15s;
@@ -389,8 +472,8 @@ body {
     align-items: center;
     gap: 0.25rem;
     border-radius: 0.375rem;
-    padding: 0.1rem 0.4rem;
-    font-size: 0.6875rem;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     white-space: nowrap;
@@ -412,8 +495,8 @@ body {
   .icon-btn {
     display: inline-grid;
     place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 0.375rem;
     color: var(--muted);
     transition:
@@ -449,9 +532,9 @@ body {
     border-radius: 0.75rem;
     border: 1px solid var(--line);
     background: var(--elev);
-    padding: 0.875rem 1rem;
-    font-size: 0.875rem;
-    line-height: 1.5;
+    padding: 1rem 1.15rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
   }
   .note-warn {
     border-color: var(--warn-line);
@@ -503,12 +586,24 @@ body {
     .pop-in,
     .ring-once,
     .float,
+    .hero-art .art-line,
+    .hero-art .art-chip,
+    .hero-art .art-cell,
+    .arrow-nudge,
     .draw-check path,
     .btn-hero::after {
       animation: none !important;
     }
     .draw-check path {
       stroke-dashoffset: 0;
+    }
+    .hero-art .art-chip {
+      opacity: 0;
+    }
+    .hero-art .art-line,
+    .hero-art .art-cell {
+      opacity: 1;
+      transform: none;
     }
     .btn,
     .field,

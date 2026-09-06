@@ -1,14 +1,18 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
- * A one-shot confetti burst, drawn by hand on a canvas.
+ * A one-shot confetti burst with a chime, drawn and synthesised by hand.
  *
- * There is no library here on purpose: the page's own content security policy only allows
- * scripts from this origin, and a celebration is not worth a dependency. It fires once per
- * `fireKey` change, cleans itself up, and does nothing at all for anyone who has asked their
- * system to reduce motion.
+ * No library and no audio file: the page's own content security policy only allows scripts
+ * and media from this origin, and a celebration is not worth a dependency or a download.
+ *
+ * The canvas is rendered through a portal onto the body. A `position: fixed` element resolves
+ * against the nearest transformed ancestor rather than the viewport, and the step wrapper
+ * animates a transform, so rendering it in place pinned the burst to a box a third of the way
+ * across the screen instead of centring it.
  */
 
 type Piece = {
@@ -23,9 +27,10 @@ type Piece = {
   life: number
 }
 
-const GRAVITY = 0.28
-const DRAG = 0.992
-const LIFE = 150
+const GRAVITY = 0.3
+const DRAG = 0.988
+const LIFE = 170
+const COUNT = 160
 
 function palette(): string[] {
   const styles = getComputedStyle(document.documentElement)
@@ -33,14 +38,53 @@ function palette(): string[] {
   return [read('--joy-1', '#0d7a5c'), read('--joy-2', '#f5b841'), read('--joy-3', '#ef6f4c'), read('--joy-4', '#3d8bd8')]
 }
 
-export function Confetti({ fireKey }: { fireKey: number }) {
+/** A short rising arpeggio. Quiet, and it never plays without a click behind it. */
+function chime() {
+  const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!Ctor) return
+  let ctx: AudioContext
+  try {
+    ctx = new Ctor()
+  } catch {
+    return
+  }
+  const now = ctx.currentTime
+  // C6, E6, G6, C7: a major triad resolving upward reads as "finished" rather than "alert".
+  const notes = [1046.5, 1318.5, 1568.0, 2093.0]
+  notes.forEach((freq, i) => {
+    const at = now + i * 0.075
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(freq, at)
+    gain.gain.setValueAtTime(0, at)
+    gain.gain.linearRampToValueAtTime(0.16, at + 0.012)
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.42)
+    osc.connect(gain).connect(ctx.destination)
+    osc.start(at)
+    osc.stop(at + 0.45)
+  })
+  setTimeout(() => ctx.close().catch(() => {}), 1200)
+}
+
+/** True once we are on the client, without writing state from an effect. */
+const noSubscribe = () => () => {}
+const onClient = () => true
+const onServer = () => false
+
+export function Confetti({ fireKey, sound = true }: { fireKey: number; sound?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const mounted = useSyncExternalStore(noSubscribe, onClient, onServer)
 
   useEffect(() => {
-    if (fireKey === 0) return
+    if (fireKey === 0 || !mounted) return
     const canvas = canvasRef.current
     if (!canvas) return
-    if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+
+    const quiet = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (quiet) return
+
+    if (sound) chime()
 
     // jsdom and older browsers hand back nothing here; a missing celebration is not an error.
     const ctx = typeof canvas.getContext === 'function' ? canvas.getContext('2d') : null
@@ -49,33 +93,33 @@ export function Confetti({ fireKey }: { fireKey: number }) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const width = window.innerWidth
     const height = window.innerHeight
-    canvas.width = width * dpr
-    canvas.height = height * dpr
+    canvas.width = Math.round(width * dpr)
+    canvas.height = Math.round(height * dpr)
     canvas.style.width = `${width}px`
     canvas.style.height = `${height}px`
-    ctx.scale(dpr, dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
     const colours = palette()
     const pieces: Piece[] = []
-    // Two side cannons rather than a ceiling drop: it reads as a celebration, not weather.
-    for (const side of [0, 1]) {
-      const originX = side === 0 ? width * 0.08 : width * 0.92
-      const aim = side === 0 ? 1 : -1
-      for (let i = 0; i < 70; i++) {
-        const speed = 9 + Math.random() * 11
-        const angle = (-70 + Math.random() * 45) * (Math.PI / 180)
-        pieces.push({
-          x: originX,
-          y: height * 0.72,
-          vx: Math.cos(angle) * speed * aim,
-          vy: Math.sin(angle) * speed,
-          size: 5 + Math.random() * 6,
-          tilt: Math.random() * Math.PI,
-          spin: (Math.random() - 0.5) * 0.3,
-          colour: colours[i % colours.length],
-          life: LIFE,
-        })
-      }
+    const originX = width / 2
+    const originY = height * 0.42
+
+    for (let i = 0; i < COUNT; i++) {
+      // A full circle of directions, squashed horizontally so the burst reads as a wide spray
+      // rather than a ball, and given a slight upward bias so gravity has something to undo.
+      const angle = (i / COUNT) * Math.PI * 2 + Math.random() * 0.2
+      const speed = 6 + Math.random() * 12
+      pieces.push({
+        x: originX,
+        y: originY,
+        vx: Math.cos(angle) * speed * 1.45,
+        vy: Math.sin(angle) * speed - 4,
+        size: 5 + Math.random() * 7,
+        tilt: Math.random() * Math.PI,
+        spin: (Math.random() - 0.5) * 0.32,
+        colour: colours[i % colours.length],
+        life: LIFE,
+      })
     }
 
     let frame = 0
@@ -99,7 +143,7 @@ export function Confetti({ fireKey }: { fireKey: number }) {
         ctx.save()
         ctx.translate(p.x, p.y)
         ctx.rotate(p.tilt)
-        ctx.globalAlpha = Math.min(1, p.life / 40)
+        ctx.globalAlpha = Math.min(1, p.life / 45)
         ctx.fillStyle = p.colour
         // A squashed rectangle spinning on one axis reads as a tumbling paper scrap.
         ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2)
@@ -118,7 +162,12 @@ export function Confetti({ fireKey }: { fireKey: number }) {
       cancelAnimationFrame(frame)
       ctx.clearRect(0, 0, width, height)
     }
-  }, [fireKey])
+  }, [fireKey, mounted, sound])
 
-  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-50" />
+  if (!mounted) return null
+
+  return createPortal(
+    <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-[100]" />,
+    document.body,
+  )
 }
