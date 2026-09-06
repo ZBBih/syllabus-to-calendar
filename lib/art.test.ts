@@ -6,16 +6,19 @@ import {
   ART_PIECES,
   ART_SRC,
   ART_WIDTH,
+  artUrl,
   flightOffset,
 } from "./art";
 
 describe("the illustration", () => {
   it("points at files that ship in public", () => {
-    expect(ART_SRC).toBe("/art/paper.png");
+    expect(ART_SRC).toBe("/art/toned/paper-light.webp");
     expect(ART_WIDTH).toBe(1200);
     expect(ART_HEIGHT).toBe(896);
-    for (const p of ART_PIECES)
-      expect(p.src).toMatch(/^\/art\/parts\/[a-z0-9]+\.png$/);
+    for (const p of [...ART_PIECES, ...ART_DAYS]) {
+      expect(artUrl(p.id, "light")).toMatch(/^\/art\/toned\/[a-z0-9]+-light\.webp$/);
+      expect(artUrl(p.id, "dark")).toMatch(/^\/art\/toned\/[a-z0-9]+-dark\.webp$/);
+    }
   });
 
   it("crops the document from the left half and the calendar from the right", () => {

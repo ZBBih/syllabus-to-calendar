@@ -424,10 +424,28 @@ body {
   .art-stage {
     isolation: isolate;
   }
+  /*
+    Two files per piece, one toned for each palette. Naming them here rather than in markup is
+    what keeps the second set off the wire: a browser fetches only the background the applied
+    rule points at.
+  */
   .art-piece {
     position: absolute;
-    object-fit: contain;
+    display: block;
+    background: var(--art-light) center / 100% 100% no-repeat;
     will-change: transform, opacity;
+  }
+  .dark .art-piece {
+    background-image: var(--art-dark);
+  }
+  .art-crop {
+    display: block;
+    overflow: hidden;
+    background: var(--art-light) no-repeat;
+    background-size: auto 190%;
+  }
+  .dark .art-crop {
+    background-image: var(--art-dark);
   }
   .art-document {
     animation: paper-in 0.66s cubic-bezier(0.22, 0.7, 0.28, 1) 0.05s both;

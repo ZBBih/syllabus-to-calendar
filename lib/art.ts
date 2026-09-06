@@ -10,10 +10,23 @@
  * git history rather than in the repo, because carrying unused megabytes is not free and mixing
  * illustration styles is the fastest way to make a site look assembled rather than designed.
  *
- * See docs/illustration.md for where it came from and how its transparency was recovered.
+ * See docs/illustration.md for where it came from, how its transparency was recovered, and how
+ * it was brought onto the site's palette.
  */
 
-export const ART_SRC = "/art/paper.png";
+/**
+ * Where a piece's file lives. Two of everything: the render's own cream is warmer and yellower
+ * than this site's paper, and it had no dark version at all, which put two glaring near-white
+ * blocks on a near-black page. scripts/tone-art.py maps it onto the palette in both themes.
+ *
+ * The hero paints these as CSS backgrounds rather than <img>, which is what keeps the second set
+ * off the wire: a browser fetches the background the applied rule names, and only that one.
+ */
+export function artUrl(id: string, theme: "light" | "dark") {
+  return `/art/toned/${id}-${theme}.webp`;
+}
+
+export const ART_SRC = artUrl("paper", "light");
 export const ART_WIDTH = 1200;
 export const ART_HEIGHT = 896;
 export const ART_ALT =
@@ -34,7 +47,6 @@ export type ArtPart = keyof typeof ART_FOCUS;
  */
 export type ArtPiece = {
   id: string;
-  src: string;
   /** Position and size within the frame, in percent. */
   left: number;
   top: number;
@@ -47,7 +59,6 @@ export type ArtPiece = {
 export const ART_PIECES: ArtPiece[] = [
   {
     id: "document",
-    src: "/art/parts/document.png",
     left: 1.083,
     top: 5.134,
     width: 45.583,
@@ -56,7 +67,6 @@ export const ART_PIECES: ArtPiece[] = [
   },
   {
     id: "card1",
-    src: "/art/parts/card1.png",
     left: 34.667,
     top: 4.018,
     width: 13.167,
@@ -65,7 +75,6 @@ export const ART_PIECES: ArtPiece[] = [
   },
   {
     id: "card2",
-    src: "/art/parts/card2.png",
     left: 49.5,
     top: 2.679,
     width: 10.25,
@@ -74,7 +83,6 @@ export const ART_PIECES: ArtPiece[] = [
   },
   {
     id: "card3",
-    src: "/art/parts/card3.png",
     left: 60.5,
     top: 5.134,
     width: 16.083,
@@ -83,7 +91,6 @@ export const ART_PIECES: ArtPiece[] = [
   },
   {
     id: "calendar",
-    src: "/art/parts/calendar.png",
     left: 47.5,
     top: 2.679,
     width: 51.083,
@@ -113,7 +120,6 @@ export const ART_FLIGHT_ORIGIN = { x: 24, y: 52 } as const;
 export const ART_DAYS: ArtPiece[] = [
   {
     id: "day1",
-    src: "/art/parts/day1.png",
     left: 77.5,
     top: 47.433,
     width: 4.667,
@@ -122,7 +128,6 @@ export const ART_DAYS: ArtPiece[] = [
   },
   {
     id: "day2",
-    src: "/art/parts/day2.png",
     left: 61.083,
     top: 52.902,
     width: 4.833,
@@ -131,7 +136,6 @@ export const ART_DAYS: ArtPiece[] = [
   },
   {
     id: "day3",
-    src: "/art/parts/day3.png",
     left: 71.333,
     top: 60.714,
     width: 4.833,
@@ -140,7 +144,6 @@ export const ART_DAYS: ArtPiece[] = [
   },
   {
     id: "day4",
-    src: "/art/parts/day4.png",
     left: 81.5,
     top: 68.75,
     width: 4.667,

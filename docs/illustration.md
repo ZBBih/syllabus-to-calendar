@@ -107,3 +107,32 @@ addressed. Compositing the emptied calendar and the four sprites back at their r
 reproduces the render.
 
 In the hero the days fill one at a time, each on the beat a flying date arrives.
+
+## Onto the site's palette
+
+The render was generated, not designed to a spec, so its colours were its own: a cream at
+`#f8f4e9`, warmer and yellower than the page's `#fbfaf7`, and no dark version at all, which put
+two glaring near-white blocks on a near-black screen. Its green, as it happens, was already
+within a hair of `--accent`.
+
+`scripts/tone-art.py` maps it on. Filtering the whole picture drags every colour along with it,
+so instead the pixels are sorted into the three materials the render actually uses -- paper and
+printing, the marked days and the header, the pin -- and each is mapped onto the token it
+corresponds to. In dark mode neutrals are inverted in lightness rather than dimmed, so a mark
+that is darker than its sheet in daylight is lighter than it at night, which is how the rest of
+the interface behaves.
+
+Two things that inversion gets wrong, and how:
+
+- **Shadows.** They live in the alpha channel as dark pixels. Inverted with the paper, every
+  shape gains a pale halo. So partial alpha is split by brightness: a dark pixel there is shadow
+  and keeps its colour, a bright one is the artwork's own anti-aliased edge and is inverted with
+  the rest, or every shape keeps a cream fringe that only shows against a dark page.
+- **Shading.** The paper's own shaded cut edges are dark, so inverting them outright turns each
+  into a light rim. Only the range the material occupies is inverted; below a knee the curve
+  falls away again, so a shadow stays a shadow. The two halves meet at the same value.
+
+Both themes are written as WebP into `public/art/toned/`. The hero paints them as CSS
+backgrounds rather than `<img>`, which is what keeps the second set off the wire: a browser
+fetches the background named by the rule that applies, and only that one. The untouched renders
+stay in `art/`, outside `public/`, because nothing serves them.
