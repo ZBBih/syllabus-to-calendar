@@ -39,7 +39,7 @@ Not flagged by design:
 - **The Upload gate only requires one named class** (`components/upload-step.tsx:65`) Several unnamed classes with real dates pass through, which is how the previous finding happens. Verified: verifier confirmed.
 - **A manually added row with a blank date or title is counted as included, then dropped at export with no indicator** (`lib/export.ts:5`) The student sees the count go up and never learns the row was discarded. Verified: verifier confirmed.
 - **The review table always overflows sideways on a phone** (`components/review-table.tsx:38`) Five columns with a minimum title width force horizontal scrolling on the screen students use most. Verified: verifier confirmed.
-- **The Content Security Policy allows inline scripts in production** (`next.config.ts:5`) Needed today for the theme script that prevents a flash of the wrong theme; a nonce or hash would keep the protection. Low real risk since nothing renders syllabus text as HTML. Verified: verifier confirmed.
+- **The Content Security Policy allows inline scripts in production** (`next.config.ts:5`) Needed today for the theme script that prevents a flash of the wrong theme. Low real risk since nothing renders syllabus text as HTML. Verified: verifier confirmed. Decision 2026-09-05: left as is. Next.js injects its own inline scripts on every page, so a hash for the theme script is not enough, and a per-request nonce needs middleware that turns the static page into a server render on every hit. The owner chose to keep the static build.
 
 ## Worth adding and why
 

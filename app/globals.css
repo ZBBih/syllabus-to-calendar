@@ -322,10 +322,10 @@ body {
   }
   .review-table tr {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
     grid-template-areas:
-      'check title delete'
-      'check meta meta';
+      'check title title delete'
+      'check date time delete';
     gap: 0.35rem 0.5rem;
     align-items: start;
     padding: 0.6rem 0.5rem;
@@ -335,6 +335,7 @@ body {
   }
   .review-table td {
     display: block;
+    min-width: 0;
     padding: 0 !important;
   }
   .review-table .cell-check {
@@ -352,14 +353,16 @@ body {
   .review-table .cell-delete {
     grid-area: delete;
   }
-  .review-table .cell-date,
-  .review-table .cell-time {
-    grid-area: meta;
-    display: inline-block;
-    width: calc(50% - 0.25rem);
+  .review-table .cell-date {
+    grid-area: date;
   }
   .review-table .cell-time {
-    margin-left: 0.5rem;
+    grid-area: time;
+  }
+  .review-table .cell-date .field,
+  .review-table .cell-time .field {
+    width: 100%;
+    min-width: 0;
   }
 }
 @media (min-width: 640px) {

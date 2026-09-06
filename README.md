@@ -8,9 +8,9 @@ Live: https://syllabus-to-calendar-ten.vercel.app
 
 Three guided steps, one screen at a time, built for a phone or a laptop.
 
-1. **Upload.** Drop all your syllabi (PDF, Word, or text) on the big zone. Each file becomes a class row with its name guessed from the file name, a term picker, and a count of the dates found. Fix the name inline (there is a clear button), or use **Add by pasting** to type a class in by hand. **Try a sample** if you have nothing handy.
-2. **Review.** One tab per class. Rows the app is unsure about are amber; a **Needs check** filter shows only those. Select all or none, add rows, or **Edit text** and re-run without losing your edits. **All classes by date** shows every deadline in one list.
-3. **Export.** Pick a reminder lead (1 day, 2 days, morning of, none). On a phone, **Send to my calendar** opens the share sheet. Anywhere, **Download all** gives `syllabify.ics`, or download one class at a time. Import guides for Google, Apple, and Outlook are right there.
+1. **Upload.** Drop all your syllabi (PDF, Word, or text) on the big zone. Each file becomes a class row with its name guessed from the file name, a term picker, and a count of the dates found. If the syllabus header says something like "MWF 10:00-10:50 in Olin 204", the weekly class meeting is detected and goes on the calendar as a repeating event (untick it on the row if you don't want it). Every class with dates needs a name before you can continue. Fix the name inline (there is a clear button), or use **Add by pasting** to type a class in by hand. **Try a sample** if you have nothing handy.
+2. **Review.** One tab per class. Rows the app is unsure about are amber; a **Needs check** filter shows only those. Select all or none, add rows, or **Edit text** and re-run without losing your edits. **All classes by date** shows every deadline in one list. On a phone each row is a card, no sideways scrolling.
+3. **Export.** Pick a reminder lead (1 day, 2 days, morning of, none). Each event carries the original syllabus line as its description, so tapping it on your phone shows the full context. A callout flags days with two or more things due. On a phone, **Send to my calendar** opens the share sheet. Anywhere, **Download all** gives `syllabify.ics`, or download one class at a time. Import guides for Google, Apple, and Outlook are right there.
 
 Your work is saved in your browser (localStorage) and the app is installable as a PWA that opens offline. Light or dark: the first visit matches your system, and the switch in the header remembers your choice.
 
@@ -43,6 +43,7 @@ Next.js 16 (App Router), React 19, Tailwind v4, [chrono-node](https://github.com
 - `lib/store.ts` reducer and localStorage persistence
 - `components/` the three step screens, stepper, class row, paste sheet, theme control, logo, by-date preview
 - `lib/export.ts` combined and per-class calendar files
+- `lib/meeting.ts` weekly class meeting detection
 - `app/manifest.ts`, `public/sw.js` PWA manifest and offline shell cache
 - `app/icon.svg`, `app/apple-icon.tsx`, `app/opengraph-image.tsx` favicon and link-preview image
 - `app/not-found.tsx` custom 404
