@@ -5,11 +5,12 @@ import { REMINDERS, type Reminder } from '@/lib/ics'
 import type { Action, State } from '@/lib/store'
 import { exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
 import { previewRows } from './date-preview'
-import { ArrowLeft, Check } from './icons'
+import { Confetti } from './confetti'
+import { ArrowLeft, Check, Upload } from './icons'
 
 const GUIDES = {
   Google: [
-    'On Android: tap "Download all", open the file from your notification or Files, and pick Google Calendar when asked. It adds every event.',
+    'On Android: tap "Download my calendar", open the file from your notification or Files, and pick Google Calendar when asked. It adds every event.',
     'If your phone offers no app for the file, install a free .ics importer from the Play Store, or use the computer route below.',
     'On a computer: open calendar.google.com, click the gear icon, then Settings, then "Import & export".',
     'Choose syllabify.ics and pick which calendar to add to (make a "School" calendar first if you like), then click Import.',
@@ -61,6 +62,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const [tab, setTab] = useState<Tab>(() => (typeof navigator === 'undefined' ? 'Google' : defaultTab(navigator.userAgent)))
   const [done, setDone] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  const [celebrate, setCelebrate] = useState(0)
   const canShare = useSyncExternalStore(noop, canShareFiles, () => false)
 
   const courses = exportableCourses(state.courses)
@@ -71,12 +73,17 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
   const repeat = state.exportSequence > 0
 
+  function succeed(message: string) {
+    dispatch({ type: 'recordExport', entries: plan.entries })
+    setDone(message)
+    setCelebrate((n) => n + 1)
+  }
+
   async function share() {
     const file = new File([plan.ics], 'syllabify.ics', { type: 'text/calendar' })
     try {
       await navigator.share({ files: [file], title: 'My class deadlines' })
-      dispatch({ type: 'recordExport', entries: plan.entries })
-      setDone('Sent. Pick your Calendar app in the share sheet and tap Add All.')
+      succeed('Sent. Pick your Calendar app in the share sheet and tap Add All.')
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       downloadAll()
@@ -85,17 +92,20 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
 
   function downloadAll() {
     saveFile(plan.ics, 'syllabify.ics')
-    dispatch({ type: 'recordExport', entries: plan.entries })
-    setDone('Saved syllabify.ics to Downloads. Now add it to your calendar:')
+    succeed('syllabify.ics is in your Downloads. One more step and your semester is on your calendar:')
   }
 
   return (
     <div className="step-enter">
-      <h1 className="h1">Put it on your calendar</h1>
+      <Confetti fireKey={celebrate} />
+
+      <h1 className="h1">
+        {done ? 'That is your whole semester.' : ready ? 'One file. Your whole semester.' : 'Nothing to export yet.'}
+      </h1>
       <p className="lede mt-2">
         {ready
-          ? `${included} event${included === 1 ? '' : 's'} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, in one file.`
-          : 'Nothing to export yet.'}
+          ? `${included} event${included === 1 ? '' : 's'} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, ready to go.`
+          : 'Go back and add a syllabus first.'}
       </p>
 
       {unnamed.length > 0 && (
@@ -118,54 +128,85 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
         </div>
       )}
 
-      {repeat && ready && (
-        <div className="note note-accent rise mt-4">
-          <strong>This is an update, not a second copy.</strong> Every event keeps the identity it had last time, so importing again corrects your calendar in
-          place.
-          <ul className="mt-2 space-y-0.5 text-[13px] text-muted">
-            <li>{plan.updated} event{plan.updated === 1 ? '' : 's'} already on your calendar will be corrected.</li>
-            <li>{plan.created} new event{plan.created === 1 ? '' : 's'} will be added.</li>
-            {plan.cancelled > 0 && (
-              <li>
-                {plan.cancelled} event{plan.cancelled === 1 ? '' : 's'} you have since removed will be withdrawn. Google and Apple honour this; a few smaller
-                calendar apps ignore withdrawals and you would have to delete those by hand.
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
-
-      <div className="card mt-6 p-5">
-        <label className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="font-medium">Remind me</span>
-          <select
-            value={state.reminder}
-            onChange={(e) => dispatch({ type: 'setReminder', reminder: e.target.value as Reminder })}
-            className="field w-auto py-1"
-          >
-            {REMINDERS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {canShare && (
-            <button type="button" onClick={share} disabled={!ready} className="btn btn-primary">
-              Send to my calendar
-            </button>
+      {/* The whole screen exists to get this pressed, so it gets the space and the weight. */}
+      <div className="card pop-in mt-6 overflow-hidden">
+        <div className="border-b border-line bg-accent-soft/60 px-5 py-7 text-center sm:px-8 sm:py-9">
+          {done ? (
+            <>
+              <div className="ring-once mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-ink">
+                <span className="draw-check">
+                  <Check size={26} />
+                </span>
+              </div>
+              <p className="mt-4 font-display text-2xl">Done.</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-secondary">
+                  Download it again
+                </button>
+                {canShare && (
+                  <button type="button" onClick={share} disabled={!ready} className="btn btn-secondary">
+                    Send to my calendar
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-3xl sm:text-4xl">
+                <span className="tabular-nums text-accent">{included}</span> deadline{included === 1 ? '' : 's'}, one tap away
+              </p>
+              <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+                Grab the file, open it, and every date above lands in your calendar with a reminder attached.
+              </p>
+              <div className="mt-6 flex flex-col items-center gap-2.5">
+                {canShare ? (
+                  <>
+                    <button type="button" onClick={share} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
+                      <Upload size={18} /> Send to my calendar
+                    </button>
+                    <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-ghost btn-sm">
+                      or download the file
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
+                    <Upload size={18} /> Download my calendar
+                  </button>
+                )}
+              </div>
+            </>
           )}
-          <button type="button" onClick={downloadAll} disabled={!ready} className={`btn ${canShare ? 'btn-secondary' : 'btn-primary'}`}>
-            Download all
-          </button>
-          <div className="relative">
-            <button type="button" disabled={!ready || courses.length < 2} onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="btn btn-secondary">
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 px-5 py-4">
+          <label className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">Remind me</span>
+            <select
+              value={state.reminder}
+              onChange={(e) => dispatch({ type: 'setReminder', reminder: e.target.value as Reminder })}
+              className="field w-auto py-1"
+            >
+              {REMINDERS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="relative ml-auto">
+            <button
+              type="button"
+              disabled={!ready || courses.length < 2}
+              onClick={() => setMenu((v) => !v)}
+              aria-expanded={menu}
+              className="btn btn-secondary btn-sm"
+            >
               One class only
             </button>
             {menu && (
-              <ul className="card rise absolute left-0 z-10 mt-1.5 min-w-48 overflow-hidden p-1">
+              <ul className="card pop-in absolute right-0 z-10 mt-1.5 min-w-48 overflow-hidden p-1">
                 {courses.map((c) => (
                   <li key={c.id}>
                     <button
@@ -175,7 +216,8 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                         saveFile(one.ics, fileNameFor(c))
                         dispatch({ type: 'recordExport', entries: mergeHistory(state.lastExport, one.entries) })
                         setMenu(false)
-                        setDone(`Saved ${fileNameFor(c)} to Downloads.`)
+                        setDone(`${fileNameFor(c)} is in your Downloads.`)
+                        setCelebrate((n) => n + 1)
                       }}
                       className="w-full rounded-md px-3 py-1.5 text-left text-sm hover:bg-accent-soft"
                     >
@@ -187,14 +229,28 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
             )}
           </div>
         </div>
-
-        {done && (
-          <p className="rise mt-3 flex items-center gap-1.5 text-sm font-medium text-ok">
-            <Check size={15} /> {done}
-          </p>
-        )}
-        {canShare && <p className="mt-2 text-xs text-muted">On a phone, Send to my calendar opens the share sheet so you can add every event in one tap.</p>}
       </div>
+
+      {repeat && ready && !done && (
+        <div className="note note-accent rise mt-4">
+          <strong>This is an update, not a second copy.</strong> Every event keeps the identity it had last time, so importing again corrects your calendar in
+          place.
+          <ul className="mt-2 space-y-0.5 text-[13px] text-muted">
+            <li>
+              {plan.updated} event{plan.updated === 1 ? '' : 's'} already on your calendar will be corrected.
+            </li>
+            <li>
+              {plan.created} new event{plan.created === 1 ? '' : 's'} will be added.
+            </li>
+            {plan.cancelled > 0 && (
+              <li>
+                {plan.cancelled} event{plan.cancelled === 1 ? '' : 's'} you have since removed will be withdrawn. Google and Apple honour this; a few smaller
+                calendar apps ignore withdrawals and you would have to delete those by hand.
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
 
       <div className="card mt-4 p-5">
         <div className="flex gap-1 border-b border-line">

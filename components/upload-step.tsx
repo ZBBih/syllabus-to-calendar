@@ -7,8 +7,7 @@ import { SAMPLE_NAME, SAMPLE_TEXT } from '@/lib/sample'
 import { FileDrop } from './file-drop'
 import { ClassRow } from './class-row'
 import { PasteSheet } from './paste-sheet'
-import { Hero } from './hero'
-import { ArrowRight } from './icons'
+import { ArrowLeft, ArrowRight } from './icons'
 
 /** Every class that has dates must be named, and at least one such class must exist. */
 export function canProceed(courses: Course[]) {
@@ -31,7 +30,13 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
   return (
     <div className="step-enter">
       {empty ? (
-        <Hero />
+        <>
+          <button type="button" onClick={() => dispatch({ type: 'setStep', step: 0 })} className="btn btn-ghost btn-sm -ml-2 mb-3">
+            <ArrowLeft size={14} /> Back
+          </button>
+          <h1 className="h1">Drop your syllabi</h1>
+          <p className="lede mt-2">Each file becomes a class. Every date, meeting and grading table gets pulled out while you watch.</p>
+        </>
       ) : (
         <>
           <h1 className="h1">Your classes</h1>

@@ -34,6 +34,19 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
   const included = active.events.filter((e) => e.include !== false && isComplete(e)).length
   const incomplete = active.events.filter((e) => !isComplete(e)).length
 
+  // All, None and Needs check are one group: whichever is showing is the one lit up. Picking a
+  // selection drops the filter, so you can never be looking at a subset while a button claims
+  // everything is chosen.
+  const every = active.events.length > 0 && active.events.every((e) => e.include !== false)
+  const none = active.events.length > 0 && active.events.every((e) => e.include === false)
+  const allLit = every && !needsCheck
+  const noneLit = none && !needsCheck
+
+  function selectAll(include: boolean) {
+    setNeedsCheck(false)
+    dispatch({ type: 'setIncludeAll', courseId: active.id, include })
+  }
+
   return (
     <div className="step-enter">
       <h1 className="h1">Check the dates</h1>
@@ -86,15 +99,16 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
             {active.events.length} event{active.events.length === 1 ? '' : 's'}, {included} will export
             {incomplete > 0 && <span className="pill pill-warn ml-2">{incomplete} need a date and title</span>}
           </span>
-          <button type="button" onClick={() => dispatch({ type: 'setIncludeAll', courseId: active.id, include: true })} className="btn btn-secondary btn-sm">
+          <button type="button" aria-pressed={allLit} onClick={() => selectAll(true)} className={`btn btn-sm ${allLit ? 'btn-primary' : 'btn-secondary'}`}>
             All
           </button>
-          <button type="button" onClick={() => dispatch({ type: 'setIncludeAll', courseId: active.id, include: false })} className="btn btn-secondary btn-sm">
+          <button type="button" aria-pressed={noneLit} onClick={() => selectAll(false)} className={`btn btn-sm ${noneLit ? 'btn-primary' : 'btn-secondary'}`}>
             None
           </button>
           <button
             type="button"
             aria-pressed={needsCheck}
+            disabled={low.length === 0 && !needsCheck}
             onClick={() => setNeedsCheck((v) => !v)}
             className={`btn btn-sm ${needsCheck ? 'btn-primary' : 'btn-secondary'}`}
           >

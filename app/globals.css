@@ -16,10 +16,16 @@
   --line: #e5e0d5;
   --line-strong: #d4cec0;
 
-  --accent: #1f5a4c;
-  --accent-strong: #163f36;
-  --accent-soft: #e5efea;
+  --accent: #0d7a5c;
+  --accent-strong: #085d46;
+  --accent-soft: #ddf2ea;
   --accent-ink: #ffffff;
+  --accent-glow: #12a97e;
+
+  --joy-1: #0d7a5c;
+  --joy-2: #f5b841;
+  --joy-3: #ef6f4c;
+  --joy-4: #3d8bd8;
 
   --warn: #a55a08;
   --warn-soft: #fbeed6;
@@ -39,10 +45,16 @@
   --line: #2b2d27;
   --line-strong: #3b3e35;
 
-  --accent: #7fc3ac;
-  --accent-strong: #a3d8c5;
-  --accent-soft: #1b2a25;
-  --accent-ink: #0d1613;
+  --accent: #4fc79d;
+  --accent-strong: #74dab6;
+  --accent-soft: #10291f;
+  --accent-ink: #06201a;
+  --accent-glow: #32e0aa;
+
+  --joy-1: #4fc79d;
+  --joy-2: #f5c65f;
+  --joy-3: #ff8a68;
+  --joy-4: #6aa9e8;
 
   --warn: #e0a33c;
   --warn-soft: #2c2412;
@@ -65,6 +77,7 @@
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
+  --color-accent-glow: var(--accent-glow);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-warn-line: var(--warn-line);
@@ -122,6 +135,49 @@ body {
   }
   to {
     transform: translate(-50%, 0);
+  }
+}
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes draw-check {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+  }
+}
+@keyframes sweep {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
   }
 }
 
@@ -208,6 +264,9 @@ body {
       color 0.15s ease,
       opacity 0.15s ease;
   }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
   .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
@@ -238,6 +297,61 @@ body {
   .btn-sm {
     padding: 0.3rem 0.6rem;
     font-size: 0.8125rem;
+  }
+  /* The one button on the export screen that everything else is leading up to. */
+  .btn-hero {
+    padding: 0.95rem 1.6rem;
+    font-size: 1.0625rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 30px -12px color-mix(in oklab, var(--accent) 75%, transparent);
+  }
+  .btn-hero:hover:not(:disabled) {
+    box-shadow: 0 14px 34px -12px color-mix(in oklab, var(--accent) 85%, transparent);
+    transform: translateY(-1px);
+  }
+  .btn-hero:active:not(:disabled) {
+    transform: translateY(0) scale(0.99);
+  }
+  .btn-hero:not(:disabled)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.22) 50%, transparent 65%);
+    background-size: 220% 100%;
+    animation: sweep 3.6s ease-in-out 1.2s infinite;
+    pointer-events: none;
+  }
+  .btn-hero {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lift {
+    transition:
+      transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.18s ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in oklab, var(--accent) 45%, var(--line));
+  }
+
+  .pop-in {
+    animation: pop-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .ring-once {
+    animation: ring 0.7s ease-out 1;
+  }
+  .float {
+    animation: float-y 4s ease-in-out infinite;
+  }
+
+  /* The finished tick on the export screen draws itself once. */
+  .draw-check path {
+    stroke-dasharray: 32;
+    stroke-dashoffset: 32;
+    animation: draw-check 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards;
   }
 
   .link {
@@ -385,13 +499,27 @@ body {
     .step-enter,
     .stagger > *,
     .sheet,
-    .sheet-backdrop {
+    .sheet-backdrop,
+    .pop-in,
+    .ring-once,
+    .float,
+    .draw-check path,
+    .btn-hero::after {
       animation: none !important;
+    }
+    .draw-check path {
+      stroke-dashoffset: 0;
     }
     .btn,
     .field,
-    .icon-btn {
+    .icon-btn,
+    .lift {
       transition: none;
+    }
+    .btn:active:not(:disabled),
+    .lift:hover,
+    .btn-hero:hover:not(:disabled) {
+      transform: none;
     }
   }
 

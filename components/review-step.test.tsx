@@ -44,3 +44,42 @@ describe('ReviewStep', () => {
     expect(screen.getByDisplayValue('Essay')).toBeTruthy()
   })
 })
+
+describe('ReviewStep selection controls', () => {
+  it('lights All when every row is in, and None when none are', () => {
+    const { rerender } = render(<ReviewStep state={state} dispatch={() => {}} />)
+    expect(screen.getByRole('button', { name: /^all$/i }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: /^none$/i }).getAttribute('aria-pressed')).toBe('false')
+
+    const off: State = {
+      ...state,
+      courses: [{ ...state.courses[0], events: state.courses[0].events.map((e) => ({ ...e, include: false })) }],
+    }
+    rerender(<ReviewStep state={off} dispatch={() => {}} />)
+    expect(screen.getByRole('button', { name: /^all$/i }).getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByRole('button', { name: /^none$/i }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('turning on Needs check drops the All highlight, and picking All turns the filter back off', () => {
+    render(<ReviewStep state={state} dispatch={() => {}} />)
+    const all = () => screen.getByRole('button', { name: /^all$/i })
+    const filter = () => screen.getByRole('button', { name: /needs check/i })
+
+    expect(all().getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(filter())
+    expect(filter().getAttribute('aria-pressed')).toBe('true')
+    expect(all().getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(all())
+    expect(filter().getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('disables the filter when there is nothing to check', () => {
+    const clean: State = {
+      ...state,
+      courses: [{ ...state.courses[0], events: state.courses[0].events.map((e) => ({ ...e, confidence: 'high' as const })) }],
+    }
+    render(<ReviewStep state={clean} dispatch={() => {}} />)
+    expect((screen.getByRole('button', { name: /needs check/i }) as HTMLButtonElement).disabled).toBe(true)
+  })
+})

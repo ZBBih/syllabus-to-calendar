@@ -23,7 +23,8 @@ export type Course = {
   viaPhoto?: boolean
 }
 
-export type Step = 1 | 2 | 3
+/** 0 is the landing page. Once a class exists the flow never goes back to it. */
+export type Step = 0 | 1 | 2 | 3
 export type State = {
   courses: Course[]
   reminder: Reminder
@@ -77,7 +78,7 @@ export function newCourse(): Course {
 }
 
 export function initialState(): State {
-  return { courses: [newCourse()], reminder: '1d', step: 1, activeCourseId: null, lastExport: [], exportSequence: 0 }
+  return { courses: [newCourse()], reminder: '1d', step: 0, activeCourseId: null, lastExport: [], exportSequence: 0 }
 }
 
 function mapCourse(state: State, id: string, fn: (c: Course) => Course): State {
@@ -295,7 +296,10 @@ export function sanitize(raw: unknown): State | null {
   const courses = s.courses.map(sanitizeCourse).filter((c): c is Course => c !== null)
   if (courses.length === 0) return null
   const reminder = isStr(s.reminder) && REMINDERS.has(s.reminder) ? (s.reminder as Reminder) : '1d'
-  const step: Step = s.step === 2 || s.step === 3 ? s.step : 1
+  // A returning visitor with work in progress lands back on their step, not the sales pitch.
+  const hasWork = courses.some((c) => c.events.length > 0 || c.text.trim() !== '')
+  const savedStep = s.step === 1 || s.step === 2 || s.step === 3 ? (s.step as Step) : hasWork ? 1 : 0
+  const step: Step = savedStep
   const activeCourseId = isStr(s.activeCourseId) && courses.some((c) => c.id === s.activeCourseId) ? s.activeCourseId : null
   const lastExport = Array.isArray(s.lastExport) ? s.lastExport.map(sanitizeEntry).filter((e): e is ExportedEntry => e !== null) : []
   const exportSequence = isNum(s.exportSequence) ? Math.max(0, Math.floor(s.exportSequence)) : 0

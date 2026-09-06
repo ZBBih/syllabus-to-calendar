@@ -1,13 +1,20 @@
-export function Logo({ size = 40, className = '' }: { size?: number; className?: string }) {
+/**
+ * A calendar page with a tick through it.
+ *
+ * The earlier mark carried a dark header band as well as the page, the rings and the tick,
+ * which turned to mud at the 28px the header actually renders it at. The band is gone and
+ * the tick is now the heaviest shape, so the silhouette survives being small.
+ */
+export function Logo({ size = 40, className = '', animate = false }: { size?: number; className?: string; animate?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" className={className} aria-hidden="true">
-      <rect width="64" height="64" rx="15" fill="var(--accent)" />
-      <rect x="12" y="15" width="40" height="37" rx="7" fill="var(--accent-ink)" />
-      <rect x="12" y="15" width="40" height="9" rx="7" fill="var(--accent-strong)" />
-      <rect x="12" y="20" width="40" height="4" fill="var(--accent-strong)" />
-      <rect x="20" y="9" width="5" height="11" rx="2.5" fill="var(--accent-strong)" />
-      <rect x="39" y="9" width="5" height="11" rx="2.5" fill="var(--accent-strong)" />
-      <path d="M22 37 L29 44 L43 30" fill="none" stroke="var(--accent)" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="64" height="64" rx="16" fill="var(--accent)" />
+      <rect x="11" y="17" width="42" height="36" rx="7" fill="var(--accent-ink)" />
+      <rect x="19" y="9" width="6" height="14" rx="3" fill="var(--accent-ink)" />
+      <rect x="39" y="9" width="6" height="14" rx="3" fill="var(--accent-ink)" />
+      <g className={animate ? 'draw-check' : undefined}>
+        <path d="M21 36 L29 44 L44 26" fill="none" stroke="var(--accent)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
     </svg>
   )
 }

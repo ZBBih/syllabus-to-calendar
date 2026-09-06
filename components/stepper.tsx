@@ -3,12 +3,14 @@
 import type { Step } from '@/lib/store'
 import { Check } from './icons'
 
-const LABELS: Record<Step, string> = { 1: 'Upload', 2: 'Review', 3: 'Export' }
+/** The landing page is step 0 and is not part of the progress trail, so it has no label. */
+type FlowStep = Exclude<Step, 0>
+const LABELS: Record<FlowStep, string> = { 1: 'Upload', 2: 'Review', 3: 'Export' }
 
 export function Stepper({ current, done, onGo }: { current: Step; done: Set<Step>; onGo: (s: Step) => void }) {
   return (
     <ol className="flex items-center" aria-label="Progress">
-      {([1, 2, 3] as Step[]).map((s, i) => {
+      {([1, 2, 3] as FlowStep[]).map((s, i) => {
         const isDone = done.has(s)
         const isCurrent = s === current
         const clickable = isDone || s < current

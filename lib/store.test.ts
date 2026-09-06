@@ -90,15 +90,15 @@ describe('sanitize', () => {
 })
 
 describe('flow state', () => {
-  it('starts on step 1 with no active course and persists step/active through sanitize', () => {
+  it('starts on the landing page with no active course and persists step/active through sanitize', () => {
     const s = initialState()
-    expect(s.step).toBe(1)
+    expect(s.step).toBe(0) // a first visit lands on the front page, not the drop zone
     expect(s.activeCourseId).toBeNull()
     const s2 = reducer(reducer(s, { type: 'setStep', step: 3 }), { type: 'setActive', id: s.courses[0].id })
     const back = sanitize(JSON.parse(JSON.stringify(s2)))!
     expect(back.step).toBe(3)
     expect(back.activeCourseId).toBe(s.courses[0].id)
-    expect(sanitize({ courses: [{ id: 'c' }], step: 9, activeCourseId: 'ghost' })).toMatchObject({ step: 1, activeCourseId: null })
+    expect(sanitize({ courses: [{ id: 'c' }], step: 9, activeCourseId: 'ghost' })).toMatchObject({ step: 0, activeCourseId: null })
   })
   it('setIncludeAll flips every row and removing the active course clears it', () => {
     let s = reducer(initialState(), { type: 'update', id: initialState().courses[0].id, patch: {} })
@@ -195,5 +195,28 @@ describe('reducer, second pass over a syllabus', () => {
     expect(back.lastExport).toEqual([])
     expect(back.courses[0].weights).toEqual([])
     expect(back.courses[0].viaPhoto).toBeUndefined()
+  })
+})
+
+describe('the landing gate', () => {
+  it('sends a first visit to the front page', () => {
+    expect(initialState().step).toBe(0)
+    expect(sanitize({ courses: [{ id: 'c', name: '', events: [], text: '' }], reminder: '1d' })!.step).toBe(0)
+  })
+
+  it('sends someone with work in progress back to their flow, not the sales pitch', () => {
+    const saved = { courses: [{ id: 'c', name: 'ECON', text: 'Sept 14 Quiz', events: [] }], reminder: '1d' }
+    expect(sanitize(saved)!.step).toBe(1)
+  })
+
+  it('keeps an explicitly saved step', () => {
+    const saved = { courses: [{ id: 'c', name: 'ECON', text: 'x', events: [] }], reminder: '1d', step: 3 }
+    expect(sanitize(saved)!.step).toBe(3)
+  })
+
+  it('starting over returns to the front page', () => {
+    let s = reducer(initialState(), { type: 'setStep', step: 3 })
+    s = reducer(s, { type: 'clear' })
+    expect(s.step).toBe(0)
   })
 })
