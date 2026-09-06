@@ -1,4 +1,4 @@
-import { Coffee, Instagram, LinkedIn, Mail } from './icons'
+import { Coffee, Gmail, Instagram, LinkedIn } from './icons'
 
 /**
  * Where to find the person who made this.
@@ -11,7 +11,7 @@ import { Coffee, Instagram, LinkedIn, Mail } from './icons'
 export const SOCIALS = [
   { label: 'Instagram', href: 'https://www.instagram.com/zbweiss1645/', icon: Instagram },
   { label: 'LinkedIn', href: 'https://www.linkedin.com/in/zach-d-weiss/', icon: LinkedIn },
-  { label: 'Email', href: 'mailto:zbweiss1645@gmail.com', icon: Mail },
+  { label: 'Gmail', href: 'mailto:zbweiss1645@gmail.com', icon: Gmail },
 ] as const
 
 /**
@@ -30,8 +30,8 @@ export function SocialLinks({ size = 16, className = '' }: { size?: number; clas
           href={href}
           target={href.startsWith('mailto:') ? undefined : '_blank'}
           rel="noreferrer noopener"
-          aria-label={label === 'Email' ? 'Email Zach' : `Zach on ${label}`}
-          title={label === 'Email' ? 'zbweiss1645@gmail.com' : label}
+          aria-label={label === 'Gmail' ? 'Email Zach' : `Zach on ${label}`}
+          title={label === 'Gmail' ? 'zbweiss1645@gmail.com' : label}
           className="icon-btn"
         >
           <Icon size={size} />

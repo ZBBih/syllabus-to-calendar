@@ -7,7 +7,7 @@ import { SAMPLE_NAME, SAMPLE_TEXT } from '@/lib/sample'
 import { FileDrop } from './file-drop'
 import { ClassRow } from './class-row'
 import { PasteSheet } from './paste-sheet'
-import { ArrowLeft, ArrowRight } from './icons'
+import { ArrowLeft, ArrowRight, Trash } from './icons'
 
 /** Every class that has dates must be named, and at least one such class must exist. */
 export function canProceed(courses: Course[]) {
@@ -38,10 +38,23 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
           <p className="lede mt-2">Each file becomes a class. Every date, meeting and grading table gets pulled out while you watch.</p>
         </>
       ) : (
-        <>
-          <h1 className="h1">Your classes</h1>
-          <p className="lede mt-2">Name each one, check the term, then move on to the dates.</p>
-        </>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="h1">Your classes</h1>
+            <p className="lede mt-2">Name each one, check the term, then move on to the dates.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Remove ${visible.length === 1 ? 'this class' : `all ${visible.length} classes`} and start again? This cannot be undone.`)) {
+                dispatch({ type: 'clear' })
+              }
+            }}
+            className="btn btn-ghost btn-sm"
+          >
+            <Trash size={14} /> Clear all
+          </button>
+        </div>
       )}
 
       {empty && returning && (

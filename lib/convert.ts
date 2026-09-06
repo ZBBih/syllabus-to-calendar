@@ -15,7 +15,16 @@ export class NoTextLayerError extends Error {
 }
 
 export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif']
-export const ACCEPT = '.pdf,.docx,.txt,.md,image/*'
+
+/**
+ * Explicit extensions rather than a wildcard.
+ *
+ * `image/*` in an accept list makes the macOS and Windows file pickers walk the folder
+ * resolving the type of every file before the window will paint, which on a Downloads folder
+ * full of screenshots is a visible stall. Naming the extensions gets the same filtering with
+ * none of that work.
+ */
+export const ACCEPT = ['.pdf', '.docx', '.txt', '.md', ...IMAGE_EXTS.map((e) => `.${e}`)].join(',')
 export const MAX_BYTES = 25 * 1024 * 1024
 
 export class FileTooLargeError extends Error {

@@ -5,7 +5,7 @@ import { Check } from './icons'
 
 /** The landing page is step 0 and is not part of the progress trail, so it has no label. */
 type FlowStep = Exclude<Step, 0>
-const LABELS: Record<FlowStep, string> = { 1: 'Upload', 2: 'Review', 3: 'Export' }
+const LABELS: Record<FlowStep, string> = { 1: 'Your classes', 2: 'Review', 3: 'Export' }
 
 export function Stepper({ current, done, onGo }: { current: Step; done: Set<Step>; onGo: (s: Step) => void }) {
   return (

@@ -418,8 +418,9 @@ body {
     transform-origin: 28px center;
     animation: grow-line 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+  /* Plays once and settles. A loop that never stops pulls the eye off the button. */
   .hero-art .art-chip {
-    animation: fly-across 1.6s cubic-bezier(0.4, 0, 0.3, 1) infinite both;
+    animation: fly-across 1.5s cubic-bezier(0.4, 0, 0.3, 1) 1 both;
   }
   .hero-art .art-cell {
     transform-box: fill-box;
@@ -427,7 +428,7 @@ body {
     animation: cell-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   .arrow-nudge {
-    animation: nudge-x 2.4s ease-in-out infinite;
+    animation: nudge-x 2.4s ease-in-out 3;
   }
 
   /* The finished tick on the export screen draws itself once. */

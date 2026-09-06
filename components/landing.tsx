@@ -6,7 +6,7 @@ import { SAMPLE_NAME, SAMPLE_TEXT } from '@/lib/sample'
 import { HeroArt } from './hero-art'
 import { HowItWorks } from './how-it-works'
 import { SupportLink } from './site-links'
-import { ArrowRight, Camera, Check, Infinite, Lock, Swap, X } from './icons'
+import { ArrowRight, Check, Infinite, Lock, X } from './icons'
 
 /**
  * The front door: picture, call to action, explanation, call to action again.
@@ -41,8 +41,7 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
     <div className="step-enter">
       <section className="grid items-center gap-8 pt-4 sm:pt-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
         <div>
-          <p className="eyebrow">Syllabus to calendar</p>
-          <h1 className="h-display mt-3">
+          <h1 className="h-display">
             Your whole semester,
             <br />
             on your calendar,
@@ -70,6 +69,16 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
         </div>
       </section>
 
+      <div className="mt-16">
+        <HowItWorks onSample={sample} />
+      </div>
+
+      <div className="mt-10 text-center">
+        <button type="button" onClick={start} className="btn btn-primary btn-hero">
+          Add my syllabi <ArrowRight size={18} />
+        </button>
+      </div>
+
       <ul className="stagger mt-16 grid gap-3 sm:grid-cols-3">
         {PROOF.map(({ icon: Icon, label, detail }) => (
           <li key={label} className="card lift p-5">
@@ -81,16 +90,6 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
           </li>
         ))}
       </ul>
-
-      <div className="mt-20">
-        <HowItWorks onSample={sample} />
-      </div>
-
-      <div className="mt-10 text-center">
-        <button type="button" onClick={start} className="btn btn-primary btn-hero">
-          Add my syllabi <ArrowRight size={18} />
-        </button>
-      </div>
 
       <section className="mt-20">
         <h2 className="font-display text-3xl">What makes this different</h2>
@@ -128,29 +127,6 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
               ))}
             </tbody>
           </table>
-        </div>
-      </section>
-
-      <section className="stagger mt-16 grid gap-3 sm:grid-cols-2">
-        <div className="card-sunk p-5">
-          <span className="text-accent">
-            <Swap size={19} />
-          </span>
-          <h2 className="mt-2.5 font-semibold">When a deadline moves</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            A syllabus is right the day it is written and starts drifting the week after. Drop the revised file in again: you get a list of exactly what changed,
-            and the next export corrects your calendar in place rather than leaving two of everything.
-          </p>
-        </div>
-        <div className="card-sunk p-5">
-          <span className="text-accent">
-            <Camera size={19} />
-          </span>
-          <h2 className="mt-2.5 font-semibold">Even a photo of the page</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Point your camera at the printed handout. The text is read on your device, so the picture never leaves the browser and nobody else ever sees your
-            schedule.
-          </p>
         </div>
       </section>
 

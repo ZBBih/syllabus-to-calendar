@@ -5,6 +5,11 @@
  * It is a single inline SVG rather than an image so it inherits the theme colours, weighs
  * nothing, and stays sharp at any size. Every bit of the animation is CSS on classes defined
  * in globals.css, which is also where it all gets switched off for reduced motion.
+ *
+ * The sequence runs once on load and then holds still, because a loop beside a call to action
+ * competes with it for attention. To swap in a produced clip later, replace this component's
+ * body with a <video autoPlay muted playsInline> and drop the file in public/; nothing else on
+ * the landing page reaches into it.
  */
 
 const PAPER_LINES = [
@@ -47,7 +52,7 @@ export function HeroArt({ className = '' }: { className?: string }) {
       {/* Dates in transit */}
       <g className="art-flight">
         {[0, 1, 2].map((i) => (
-          <g key={i} className="art-chip" style={{ animationDelay: `${400 + i * 520}ms` }}>
+          <g key={i} className="art-chip" style={{ animationDelay: `${350 + i * 430}ms` }}>
             <rect x="126" y="82" width="44" height="20" rx="6" fill="var(--accent)" />
             <rect x="133" y="89" width="18" height="3" rx="1.5" fill="var(--accent-ink)" opacity="0.9" />
             <rect x="155" y="89" width="8" height="3" rx="1.5" fill="var(--accent-ink)" opacity="0.6" />
