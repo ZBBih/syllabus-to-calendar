@@ -4,6 +4,7 @@ import { useState, type Dispatch } from 'react'
 import { extractEvents, SEASONS, type Season } from '@/lib/extract'
 import type { Action, Course } from '@/lib/store'
 import { FileDrop } from './file-drop'
+import { nameFromFileName } from '@/lib/course-name'
 
 const thisYear = new Date().getFullYear()
 const YEARS = [thisYear - 1, thisYear, thisYear + 1]
@@ -24,14 +25,18 @@ export function CourseCard({
   const nameMissing = course.name.trim() === ''
   const canExtract = !nameMissing && course.text.trim() !== ''
 
+  function report(found: number, verb = 'Found') {
+    setNotice(
+      found === 0
+        ? 'No dates found. Check the term and try pasting just the schedule section.'
+        : `${verb} ${found} date${found === 1 ? '' : 's'}. Review them in step 2.`,
+    )
+  }
+
   function findDates() {
     const events = extractEvents(course.text, course.term)
-    dispatch({ type: 'setEvents', id: course.id, events })
-    setNotice(
-      events.length === 0
-        ? 'No dates found. Check the term and try pasting just the schedule section.'
-        : `Found ${events.length} date${events.length === 1 ? '' : 's'}. Review them in step 2.`,
-    )
+    dispatch({ type: 'mergeEvents', id: course.id, events })
+    report(events.length, course.extracted ? 'Re-ran and found' : 'Found')
   }
 
   return (
@@ -96,9 +101,16 @@ export function CourseCard({
 
       <div className="mt-4">
         <FileDrop
-          onText={(text) => {
-            dispatch({ type: 'update', id: course.id, patch: { text } })
-            setNotice('File converted to text. Check it below, then click Find dates.')
+          onFiles={([file]) => {
+            const name = course.name.trim() || nameFromFileName(file.fileName)
+            dispatch({ type: 'update', id: course.id, patch: { text: file.text, name } })
+            if (name) {
+              const events = extractEvents(file.text, course.term)
+              dispatch({ type: 'mergeEvents', id: course.id, events })
+              report(events.length)
+            } else {
+              setNotice('File converted. Add a class name, then click Find dates.')
+            }
           }}
         />
       </div>
@@ -121,7 +133,7 @@ export function CourseCard({
           disabled={!canExtract}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
         >
-          Find dates
+          {course.extracted ? 'Re-run' : 'Find dates'}
         </button>
         {!canExtract && <span className="text-xs text-zinc-500">Add a class name and some syllabus text first.</span>}
         {notice && canExtract && <span className="text-sm text-zinc-700">{notice}</span>}

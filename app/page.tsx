@@ -5,6 +5,8 @@ import { CourseCard } from '@/components/course-card'
 import { ReviewTable } from '@/components/review-table'
 import { DownloadPanel } from '@/components/download-panel'
 import { initialState, load, reducer, save } from '@/lib/store'
+import { FileDrop } from '@/components/file-drop'
+import { nameFromFileName } from '@/lib/course-name'
 
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState)
@@ -21,6 +23,7 @@ export default function Home() {
   }, [state])
 
   const reviewable = state.courses.filter((c) => c.extracted)
+  const extractable = state.courses.filter((c) => c.text.trim()).length
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
@@ -34,18 +37,42 @@ export default function Home() {
 
       <section className="mb-10">
         <h2 className="mb-4 text-xl font-semibold">1. Your classes</h2>
+        <FileDrop
+          multiple
+          className="mb-4"
+          onFiles={(files) =>
+            dispatch({
+              type: 'addFromFiles',
+              files: files.map((f) => ({ name: nameFromFileName(f.fileName), text: f.text })),
+            })
+          }
+        />
+        <p className="mb-4 text-xs text-zinc-500">
+          Each file becomes a class with its dates found automatically. Or fill in a class by hand below.
+        </p>
         <div className="space-y-4">
           {state.courses.map((c, i) => (
             <CourseCard key={c.id} course={c} index={i} canRemove={state.courses.length > 1} dispatch={dispatch} />
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => dispatch({ type: 'add' })}
-          className="mt-4 rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
-        >
-          + Add another class
-        </button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'add' })}
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50"
+          >
+            + Add another class
+          </button>
+          {extractable > 1 && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'extractAll' })}
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Find dates for all classes
+            </button>
+          )}
+        </div>
       </section>
 
       <section className="mb-10">

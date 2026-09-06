@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { buildIcs } from '@/lib/ics'
 import type { Course } from '@/lib/store'
 
@@ -32,19 +32,42 @@ type Tab = keyof typeof GUIDES
 
 export function DownloadPanel({ courses }: { courses: Course[] }) {
   const [tab, setTab] = useState<Tab>('Google')
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState<'download' | 'share' | null>(null)
+  const [canShare, setCanShare] = useState(false)
+  useEffect(() => {
+    try {
+      const probe = new File(['x'], 'probe.ics', { type: 'text/calendar' })
+      setCanShare(typeof navigator.share === 'function' && !!navigator.canShare?.({ files: [probe] }))
+    } catch {
+      setCanShare(false)
+    }
+  }, [])
   const included = courses.reduce((n, c) => n + c.events.filter((e) => e.include !== false && e.date).length, 0)
   const unnamed = courses.some((c) => c.events.some((e) => e.include !== false) && c.name.trim() === '')
   const canDownload = included > 0 && !unnamed
 
-  function download() {
-    const ics = buildIcs(
+  function ics() {
+    return buildIcs(
       courses.map((c) => ({
         name: c.name.trim(),
         events: c.events.filter((e) => e.include !== false && e.date && e.title.trim()),
       })),
     )
-    const url = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+  }
+
+  async function share() {
+    const file = new File([ics()], 'my-classes.ics', { type: 'text/calendar' })
+    try {
+      await navigator.share({ files: [file], title: 'My class deadlines' })
+      setDone('share')
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      download()
+    }
+  }
+
+  function download() {
+    const url = URL.createObjectURL(new Blob([ics()], { type: 'text/calendar;charset=utf-8' }))
     const a = document.createElement('a')
     a.href = url
     a.download = 'my-classes.ics'
@@ -52,17 +75,31 @@ export function DownloadPanel({ courses }: { courses: Course[] }) {
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
-    setDone(true)
+    setDone('download')
   }
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
+        {canShare && (
+          <button
+            type="button"
+            onClick={share}
+            disabled={!canDownload}
+            className="rounded-md bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          >
+            Send to my calendar
+          </button>
+        )}
         <button
           type="button"
           onClick={download}
           disabled={!canDownload}
-          className="rounded-md bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          className={
+            canShare
+              ? 'rounded-md border border-zinc-300 px-4 py-2.5 text-sm font-medium hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400'
+              : 'rounded-md bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-zinc-300'
+          }
         >
           Download calendar file
         </button>
@@ -74,7 +111,19 @@ export function DownloadPanel({ courses }: { courses: Course[] }) {
               : `${included} event${included === 1 ? '' : 's'} → my-classes.ics`}
         </span>
       </div>
-      {done && <p className="mt-2 text-sm text-green-700">Saved to your Downloads folder. Now add it to your calendar:</p>}
+      {done === 'download' && (
+        <p className="mt-2 text-sm text-green-700">Saved to your Downloads folder. Now add it to your calendar:</p>
+      )}
+      {done === 'share' && (
+        <p className="mt-2 text-sm text-green-700">
+          Sent. Pick your Calendar app in the share sheet and tap Add All. If it did not show up, use the steps below.
+        </p>
+      )}
+      {canShare && (
+        <p className="mt-2 text-xs text-zinc-500">
+          On a phone, “Send to my calendar” opens the share sheet so you can add every event in one tap.
+        </p>
+      )}
 
       <div className="mt-5">
         <div className="flex gap-1 border-b border-zinc-200">
