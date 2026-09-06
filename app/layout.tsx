@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   title: { default: title, template: `%s · ${title}` },
   description,
   applicationName: title,
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title, statusBarStyle: 'default' },
   openGraph: { title, description, siteName: title, type: 'website' },
   twitter: { card: 'summary_large_image', title, description },
 }
@@ -24,7 +26,7 @@ export const viewport: Viewport = {
   ],
 }
 
-const themeScript = `(function(){try{var t=localStorage.getItem('stc:theme');var d=t?t==='dark':matchMedia('(prefers-color-scheme: dark)').matches;if(d)document.documentElement.classList.add('dark')}catch(e){}})()`
+const themeScript = `(function(){try{var t=localStorage.getItem('stc:theme');var d=t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark')}catch(e){}})()`
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
