@@ -2,6 +2,7 @@
 
 import { useState, type Dispatch } from 'react'
 import type { Action, Course, State } from '@/lib/store'
+import { isComplete } from '@/lib/export'
 import { ReviewTable } from './review-table'
 import { DatePreview } from './date-preview'
 import { PasteSheet } from './paste-sheet'
@@ -26,7 +27,8 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
 
   const low = active.events.filter((e) => e.confidence === 'low')
   const rows = needsCheck ? low : active.events
-  const included = active.events.filter((e) => e.include !== false).length
+  const included = active.events.filter((e) => e.include !== false && isComplete(e)).length
+  const incomplete = active.events.filter((e) => !isComplete(e)).length
 
   return (
     <div className="step-enter">
@@ -47,7 +49,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
                 on ? 'border-accent bg-accent text-accent-ink' : 'border-line bg-elev text-fg hover:border-accent'
               }`}
             >
-              {c.name.trim() || 'Unnamed'}
+              {c.name.trim() || <span className={on ? '' : 'text-accent-strong'}>Unnamed</span>}
               {n > 0 && <span className={`pill ${on ? 'bg-accent-ink/15' : 'bg-accent-soft text-accent-strong'}`}>{n}</span>}
             </button>
           )
@@ -57,7 +59,8 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
       <div className="card mt-4 p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
           <span className="mr-auto text-sm text-muted">
-            {active.events.length} event{active.events.length === 1 ? '' : 's'}, {included} included
+            {active.events.length} event{active.events.length === 1 ? '' : 's'}, {included} will export
+            {incomplete > 0 && <span className="ml-2 pill bg-accent-soft text-accent-strong">{incomplete} need a date and title</span>}
           </span>
           <button type="button" onClick={() => dispatch({ type: 'setIncludeAll', courseId: active.id, include: true })} className="btn btn-secondary px-3 py-1">
             Select all

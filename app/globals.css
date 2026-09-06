@@ -312,3 +312,58 @@ body {
     animation: none !important;
   }
 }
+
+/* Review table: stacked card per row on phones */
+@media (max-width: 639px) {
+  .review-table table,
+  .review-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .review-table tr {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      'check title delete'
+      'check meta meta';
+    gap: 0.35rem 0.5rem;
+    align-items: start;
+    padding: 0.6rem 0.5rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--line);
+    border-radius: 0.9rem;
+  }
+  .review-table td {
+    display: block;
+    padding: 0 !important;
+  }
+  .review-table .cell-check {
+    grid-area: check;
+  }
+  .review-table .cell-check input {
+    margin-top: 0.6rem;
+  }
+  .review-table .cell-title {
+    grid-area: title;
+  }
+  .review-table .cell-title .field {
+    min-width: 0;
+  }
+  .review-table .cell-delete {
+    grid-area: delete;
+  }
+  .review-table .cell-date,
+  .review-table .cell-time {
+    grid-area: meta;
+    display: inline-block;
+    width: calc(50% - 0.25rem);
+  }
+  .review-table .cell-time {
+    margin-left: 0.5rem;
+  }
+}
+@media (min-width: 640px) {
+  .review-table {
+    overflow-x: auto;
+  }
+}

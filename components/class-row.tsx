@@ -3,6 +3,7 @@
 import { useState, type Dispatch } from 'react'
 import { SEASONS, type Season } from '@/lib/extract'
 import type { Action, Course } from '@/lib/store'
+import { DAY_LABEL } from '@/lib/meeting'
 
 const thisYear = new Date().getFullYear()
 const YEARS = [thisYear - 1, thisYear, thisYear + 1]
@@ -66,6 +67,20 @@ export function ClassRow({
             {course.text.trim() ? 'Edit text' : 'Paste text'}
           </button>
         </div>
+        {course.meeting && (
+          <label className="mt-1.5 flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={course.meetingIncluded !== false}
+              onChange={(e) => dispatch({ type: 'setMeetingIncluded', courseId: course.id, include: e.target.checked })}
+              className="h-3.5 w-3.5 accent-[var(--accent)]"
+            />
+            <span>
+              Weekly class {course.meeting.days.map((d) => DAY_LABEL[d]).join('/')} {course.meeting.start}–{course.meeting.end}
+              {course.meeting.location ? `, ${course.meeting.location}` : ''}
+            </span>
+          </label>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

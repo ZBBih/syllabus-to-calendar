@@ -8,8 +8,14 @@ import { FileDrop } from './file-drop'
 import { ClassRow } from './class-row'
 import { PasteSheet } from './paste-sheet'
 
+/** Every class that has dates must be named, and at least one such class must exist. */
 export function canProceed(courses: Course[]) {
-  return courses.some((c) => c.name.trim() && c.events.length > 0)
+  const withDates = courses.filter((c) => c.events.length > 0)
+  return withDates.length > 0 && withDates.every((c) => c.name.trim() !== '')
+}
+
+export function unnamedCount(courses: Course[]) {
+  return courses.filter((c) => c.events.length > 0 && !c.name.trim()).length
 }
 
 export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispatch<Action> }) {
@@ -17,6 +23,7 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
   const visible = state.courses.filter((c) => c.name.trim() || c.text.trim() || c.events.length)
   const empty = visible.length === 0
   const ready = canProceed(state.courses)
+  const unnamed = unnamedCount(state.courses)
 
   return (
     <div className="step-enter">
@@ -64,7 +71,11 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
       )}
 
       <div className="mt-8 flex items-center justify-end gap-3">
-        {!ready && !empty && <span className="text-sm text-muted">Each class needs a name and at least one date.</span>}
+        {!ready && !empty && (
+          <span className="text-sm font-medium text-accent-strong">
+            {unnamed > 0 ? `Name ${unnamed === 1 ? 'the class' : `all ${unnamed} classes`} to continue.` : 'Each class needs at least one date.'}
+          </span>
+        )}
         <button type="button" disabled={!ready} onClick={() => dispatch({ type: 'setStep', step: 2 })} className="btn btn-primary">
           Review dates →
         </button>

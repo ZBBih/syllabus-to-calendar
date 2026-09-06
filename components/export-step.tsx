@@ -3,15 +3,16 @@
 import { useState, useSyncExternalStore, type Dispatch } from 'react'
 import { REMINDERS, type Reminder } from '@/lib/ics'
 import type { Action, State } from '@/lib/store'
-import { fileNameFor, icsForAll, icsForCourse } from '@/lib/export'
+import { fileNameFor, icsForAll, icsForCourse, unnamedWithEvents } from '@/lib/export'
+import { previewRows } from './date-preview'
 
 const GUIDES = {
   Google: [
-    'Open calendar.google.com on a computer (the phone app cannot import files).',
-    'Optional but nice: next to "Other calendars" click + then "Create new calendar" and name it School.',
-    'Click the gear icon, then Settings, then "Import & export".',
-    'Choose syllabify.ics from your Downloads and pick the calendar to add to.',
-    'Click Import. Events show up immediately and sync to your phone.',
+    'On Android: tap "Download all", open the file from your notification or Files, and pick Google Calendar when asked. It adds every event.',
+    'If your phone offers no app for the file, install a free .ics importer from the Play Store, or use the computer route below.',
+    'On a computer: open calendar.google.com, click the gear icon, then Settings, then "Import & export".',
+    'Choose syllabify.ics and pick which calendar to add to (make a "School" calendar first if you like), then click Import.',
+    'Events sync to your phone automatically.',
   ],
   Apple: [
     'On iPhone: tap "Send to my calendar" above, choose Calendar in the share sheet, then tap Add All.',
@@ -38,6 +39,12 @@ const canShareFiles = () => {
 }
 const noop = () => () => {}
 
+export function defaultTab(ua: string): Tab {
+  if (/iPhone|iPad|iPod|Macintosh/i.test(ua)) return 'Apple'
+  if (/Windows/i.test(ua) && /Outlook/i.test(ua)) return 'Outlook'
+  return 'Google'
+}
+
 function saveFile(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/calendar;charset=utf-8' }))
   const a = document.createElement('a')
@@ -50,13 +57,15 @@ function saveFile(text: string, name: string) {
 }
 
 export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispatch<Action> }) {
-  const [tab, setTab] = useState<Tab>('Google')
+  const [tab, setTab] = useState<Tab>(() => (typeof navigator === 'undefined' ? 'Google' : defaultTab(navigator.userAgent)))
   const [done, setDone] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const canShare = useSyncExternalStore(noop, canShareFiles, () => false)
   const courses = state.courses.filter((c) => c.name.trim() && c.events.some((e) => e.include !== false && e.date))
   const included = courses.reduce((n, c) => n + c.events.filter((e) => e.include !== false && e.date).length, 0)
   const ready = included > 0
+  const unnamed = unnamedWithEvents(state.courses)
+  const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
 
   async function share() {
     const file = new File([icsForAll(courses, state.reminder)], 'syllabify.ics', { type: 'text/calendar' })
@@ -79,6 +88,29 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
       <p className="mt-2 text-muted">
         {ready ? `${included} event${included === 1 ? '' : 's'} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, one file.` : 'Nothing to export yet.'}
       </p>
+
+      {unnamed.length > 0 && (
+        <div role="alert" className="pop mt-4 rounded-2xl border border-accent bg-accent-soft p-4 text-sm">
+          <strong>{unnamed.length === 1 ? 'One class has no name' : `${unnamed.length} classes have no name`}</strong> and will be left out of the file.{' '}
+          <button type="button" onClick={() => dispatch({ type: 'setStep', step: 1 })} className="font-semibold underline">
+            Name {unnamed.length === 1 ? 'it' : 'them'} in Upload
+          </button>
+          .
+        </div>
+      )}
+      {clashDays > 0 && (
+        <div className="rise mt-4 rounded-2xl border border-line bg-elev p-4 text-sm">
+          <strong>{clashDays === 1 ? 'One day' : `${clashDays} days`} with two or more things due.</strong>{' '}
+          <button
+            type="button"
+            onClick={() => dispatch({ type: 'setStep', step: 2 })}
+            className="font-semibold text-accent-strong underline"
+          >
+            See them by date
+          </button>{' '}
+          before you import, in case something needs to move.
+        </div>
+      )}
 
       <div className="card mt-6 p-5 sm:p-6">
         <label className="flex flex-wrap items-center gap-2 text-sm">
