@@ -105,8 +105,10 @@ export function reducer(state: State, action: Action): State {
     case 'add':
       return { ...state, courses: [...state.courses, newCourse()] }
     case 'remove': {
-      if (state.courses.length <= 1) return state
-      const courses = state.courses.filter((c) => c.id !== action.id)
+      // Every class is removable, including the last one. Taking the last away leaves a blank
+      // course behind so the screen still has somewhere to type rather than going empty.
+      const kept = state.courses.filter((c) => c.id !== action.id)
+      const courses = kept.length > 0 ? kept : [newCourse()]
       return { ...state, courses, activeCourseId: state.activeCourseId === action.id ? null : state.activeCourseId }
     }
     case 'update':

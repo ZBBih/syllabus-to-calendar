@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
 import { UploadStep, canProceed, unnamedCount } from './upload-step'
 import { initialState, type Course, type State } from '@/lib/store'
 
@@ -30,9 +30,8 @@ describe('Upload gate', () => {
   })
 })
 
-describe('UploadStep clear', () => {
-  it('offers a clear once classes exist and only clears after a confirm', () => {
-    const dispatch = vi.fn()
+describe('UploadStep', () => {
+  it('shows a bin on every class row, including the only one', () => {
     const withClass: State = {
       ...blank,
       courses: [
@@ -44,22 +43,8 @@ describe('UploadStep clear', () => {
         },
       ],
     }
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    render(<UploadStep state={withClass} dispatch={dispatch} />)
-
-    const clear = screen.getByRole('button', { name: /clear all/i })
-    fireEvent.click(clear)
-    expect(confirmSpy).toHaveBeenCalled()
-    expect(dispatch).not.toHaveBeenCalledWith({ type: 'clear' })
-
-    confirmSpy.mockReturnValue(true)
-    fireEvent.click(clear)
-    expect(dispatch).toHaveBeenCalledWith({ type: 'clear' })
-    confirmSpy.mockRestore()
-  })
-
-  it('does not offer a clear when there is nothing to clear', () => {
-    render(<UploadStep state={blank} dispatch={() => {}} />)
+    render(<UploadStep state={withClass} dispatch={() => {}} />)
+    expect(screen.getByRole('button', { name: /remove econ 101/i })).toBeTruthy()
     expect(screen.queryByRole('button', { name: /clear all/i })).toBeNull()
   })
 })

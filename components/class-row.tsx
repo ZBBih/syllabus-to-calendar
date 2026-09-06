@@ -12,13 +12,11 @@ const YEARS = [thisYear - 1, thisYear, thisYear + 1]
 export function ClassRow({
   course,
   index,
-  canRemove,
   dispatch,
   onEditText,
 }: {
   course: Course
   index: number
-  canRemove: boolean
   dispatch: Dispatch<Action>
   onEditText: () => void
 }) {
@@ -101,11 +99,20 @@ export function ClassRow({
             <option key={y}>{y}</option>
           ))}
         </select>
-        {canRemove && (
-          <button type="button" onClick={() => dispatch({ type: 'remove', id: course.id })} className="icon-btn" aria-label={`Remove ${course.name.trim() || 'class'}`}>
-            <Trash size={15} />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => {
+            const named = course.name.trim()
+            const dates = course.events.length
+            const warn = dates > 0 ? `Remove ${named || 'this class'} and its ${dates} date${dates === 1 ? '' : 's'}?` : null
+            if (!warn || confirm(warn)) dispatch({ type: 'remove', id: course.id })
+          }}
+          className="icon-btn"
+          aria-label={`Remove ${course.name.trim() || 'class'}`}
+          title="Remove this class"
+        >
+          <Trash size={15} />
+        </button>
       </div>
     </div>
   )

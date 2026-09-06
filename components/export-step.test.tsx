@@ -59,7 +59,7 @@ describe('ExportStep', () => {
   it('counts only named classes in the summary and enables the main call to action', () => {
     render(<ExportStep state={base} dispatch={() => {}} />)
     expect(screen.getByText(/2 events across 1 class,/i)).toBeTruthy()
-    expect((screen.getByRole('button', { name: /download my calendar/i }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: /add to my calendar/i }) as HTMLButtonElement).disabled).toBe(false)
   })
   it('downloads one class from the menu using a slug file name', () => {
     const state: State = { ...base, courses: [base.courses[0], { ...base.courses[1], name: 'PSYC 200' }] }
@@ -67,7 +67,7 @@ describe('ExportStep', () => {
     const revoke = vi.fn()
     Object.assign(URL, { createObjectURL: create, revokeObjectURL: revoke })
     render(<ExportStep state={state} dispatch={() => {}} />)
-    fireEvent.click(screen.getByRole('button', { name: /one class only/i }))
+    fireEvent.click(screen.getByRole('button', { name: /just one class/i }))
     fireEvent.click(screen.getByRole('button', { name: 'PSYC 200' }))
     expect(create).toHaveBeenCalledTimes(1)
     expect(screen.getByText(/psyc-200\.ics is in your downloads/i)).toBeTruthy()

@@ -10,14 +10,14 @@ import { ArrowLeft, Check, Upload } from './icons'
 
 const GUIDES = {
   Google: [
-    'On Android: tap "Download my calendar", open the file from your notification or Files, and pick Google Calendar when asked. It adds every event.',
+    'On Android: tap "Add to my calendar", open the file from your notification or Files, and pick Google Calendar when asked. It adds every event.',
     'If your phone offers no app for the file, install a free .ics importer from the Play Store, or use the computer route below.',
     'On a computer: open calendar.google.com, click the gear icon, then Settings, then "Import & export".',
     'Choose syllabify.ics and pick which calendar to add to (make a "School" calendar first if you like), then click Import.',
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone: tap "Send to my calendar" above, choose Calendar in the share sheet, then tap Add All.',
+    'On iPhone: tap "Add to my calendar" above, choose Calendar in the share sheet, then tap Add All.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
     'iCloud syncs it to every Apple device.',
@@ -79,20 +79,30 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
     setCelebrate((n) => n + 1)
   }
 
-  async function share() {
+  function downloadAll() {
+    saveFile(plan.ics, 'syllabify.ics')
+    succeed('syllabify.ics is in your Downloads. One more step and your semester is on your calendar:')
+  }
+
+  /**
+   * The single way out. On a phone that can hand a file to another app this opens the share
+   * sheet, which is by far the shortest route to Calendar; everywhere else it saves the file.
+   * If the share sheet is dismissed we leave the student where they were rather than dumping
+   * a download they did not ask for.
+   */
+  async function addToCalendar() {
+    if (!canShare) {
+      downloadAll()
+      return
+    }
     const file = new File([plan.ics], 'syllabify.ics', { type: 'text/calendar' })
     try {
       await navigator.share({ files: [file], title: 'My class deadlines' })
-      succeed('Sent. Pick your Calendar app in the share sheet and tap Add All.')
+      succeed('Pick your Calendar app in the share sheet and tap Add All.')
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       downloadAll()
     }
-  }
-
-  function downloadAll() {
-    saveFile(plan.ics, 'syllabify.ics')
-    succeed('syllabify.ics is in your Downloads. One more step and your semester is on your calendar:')
   }
 
   return (
@@ -140,20 +150,11 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
               </div>
               <p className="mt-4 font-display text-2xl">Done.</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-secondary">
-                  Save the file again
+              <div className="mt-5">
+                <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-secondary">
+                  Do that again
                 </button>
-                {canShare && (
-                  <button type="button" onClick={share} disabled={!ready} className="btn btn-secondary">
-                    Open the share sheet again
-                  </button>
-                )}
               </div>
-              <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-muted">
-                Both hand over the same file. The share sheet passes it straight to an app on this phone; saving puts it in Downloads so you can open it
-                yourself or move it to another device.
-              </p>
             </>
           ) : (
             <>
@@ -164,28 +165,12 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                 Grab the file, open it, and every date above lands in your calendar with a reminder attached.
               </p>
               <div className="mt-6 flex flex-col items-center gap-2.5">
-                {canShare ? (
-                  <>
-                    <button type="button" onClick={share} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
-                      <Upload size={18} /> Send to my calendar
-                    </button>
-                    <p className="max-w-sm text-xs leading-relaxed text-muted">
-                      Opens your phone&apos;s share sheet, where you pick Calendar and tap Add All.
-                    </p>
-                    <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-ghost btn-sm">
-                      or just save the file
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button type="button" onClick={downloadAll} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
-                      <Upload size={18} /> Download my calendar
-                    </button>
-                    <p className="max-w-sm text-xs leading-relaxed text-muted">
-                      Saves syllabify.ics to Downloads. Opening it imports every date at once.
-                    </p>
-                  </>
-                )}
+                <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
+                  <Upload size={18} /> Add to my calendar
+                </button>
+                <p className="max-w-sm text-xs leading-relaxed text-muted">
+                  {canShare ? 'Opens your share sheet. Pick Calendar and tap Add All.' : 'Saves one file. Opening it imports every date at once.'}
+                </p>
               </div>
             </>
           )}
@@ -209,7 +194,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
 
           <div className={`relative ml-auto ${courses.length < 2 ? 'hidden' : ''}`}>
             <button type="button" disabled={!ready} onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="btn btn-secondary btn-sm">
-              One class only
+              Just one class
             </button>
             {menu && (
               <ul className="card pop-in absolute right-0 z-10 mt-1.5 min-w-48 overflow-hidden p-1">

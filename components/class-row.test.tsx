@@ -19,14 +19,38 @@ const course = (o: Partial<Course>): Course => ({
 describe('ClassRow', () => {
   it('shows a clear button only when the name has text, and clearing dispatches an empty name', () => {
     const dispatch = vi.fn()
-    const { rerender } = render(<ClassRow course={course({})} index={0} canRemove dispatch={dispatch} onEditText={() => {}} />)
+    const { rerender } = render(<ClassRow course={course({})} index={0} dispatch={dispatch} onEditText={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /clear name/i }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'update', id: 'c1', patch: { name: '' } })
-    rerender(<ClassRow course={course({ name: '' })} index={0} canRemove dispatch={dispatch} onEditText={() => {}} />)
+    rerender(<ClassRow course={course({ name: '' })} index={0} dispatch={dispatch} onEditText={() => {}} />)
     expect(screen.queryByRole('button', { name: /clear name/i })).toBeNull()
   })
+  it('always offers a bin, and asks before dropping a class that has dates', () => {
+    const dispatch = vi.fn()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    render(<ClassRow course={course({})} index={0} dispatch={dispatch} onEditText={() => {}} />)
+    const bin = screen.getByRole('button', { name: /remove/i })
+
+    fireEvent.click(bin)
+    expect(confirmSpy).toHaveBeenCalled()
+    expect(dispatch).not.toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
+
+    confirmSpy.mockReturnValue(true)
+    fireEvent.click(bin)
+    expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
+    confirmSpy.mockRestore()
+  })
+  it('drops an empty class without asking, since there is nothing to lose', () => {
+    const dispatch = vi.fn()
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    render(<ClassRow course={{ ...course({}), events: [] }} index={0} dispatch={dispatch} onEditText={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /remove/i }))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
+    confirmSpy.mockRestore()
+  })
   it('shows the date count pill', () => {
-    render(<ClassRow course={course({})} index={0} canRemove dispatch={() => {}} onEditText={() => {}} />)
+    render(<ClassRow course={course({})} index={0} dispatch={() => {}} onEditText={() => {}} />)
     expect(screen.getByText('1 date')).toBeTruthy()
   })
 })
