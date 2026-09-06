@@ -12,7 +12,7 @@ Three guided steps, one screen at a time, built for a phone or a laptop.
 2. **Review.** One tab per class. Rows the app is unsure about are amber; a **Needs check** filter shows only those. Select all or none, add rows, or **Edit text** and re-run without losing your edits. **All classes by date** shows every deadline in one list.
 3. **Export.** Pick a reminder lead (1 day, 2 days, morning of, none). On a phone, **Send to my calendar** opens the share sheet. Anywhere, **Download all** gives `syllabify.ics`, or download one class at a time. Import guides for Google, Apple, and Outlook are right there.
 
-Your work is saved in your browser (localStorage) and the app is installable as a PWA that opens offline. Theme follows your system by default, with a Light/Dark override in the header.
+Your work is saved in your browser (localStorage) and the app is installable as a PWA that opens offline. Light or dark: the first visit matches your system, and the switch in the header remembers your choice.
 
 ## Run it locally
 
