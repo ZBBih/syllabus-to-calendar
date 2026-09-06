@@ -1,6 +1,7 @@
 import { extractEvents, newId, type ExtractedEvent, type Term } from './extract'
 import { mergeEvents } from './merge'
-import type { Reminder } from './ics'
+import type { Meeting, Reminder } from './ics'
+import { detectMeeting } from './meeting'
 
 export type Course = {
   id: string
@@ -9,6 +10,10 @@ export type Course = {
   text: string
   events: ExtractedEvent[]
   extracted: boolean
+  /** Weekly class meeting detected from the syllabus header, if any. */
+  meeting?: Meeting | null
+  /** Whether to put the weekly meeting on the calendar. Defaults to true when a meeting exists. */
+  meetingIncluded?: boolean
 }
 
 export type Step = 1 | 2 | 3
@@ -29,6 +34,7 @@ export type Action =
   | { type: 'setStep'; step: Step }
   | { type: 'setActive'; id: string | null }
   | { type: 'setIncludeAll'; courseId: string; include: boolean }
+  | { type: 'setMeetingIncluded'; courseId: string; include: boolean }
   | { type: 'clear' }
   | { type: 'hydrate'; state: State }
 
@@ -44,7 +50,7 @@ export function defaultTerm(now = new Date()): Term {
 }
 
 export function newCourse(): Course {
-  return { id: newId(), name: '', term: defaultTerm(), text: '', events: [], extracted: false }
+  return { id: newId(), name: '', term: defaultTerm(), text: '', events: [], extracted: false, meeting: null, meetingIncluded: true }
 }
 
 export function initialState(): State {
@@ -73,12 +79,17 @@ export function reducer(state: State, action: Action): State {
         ...c,
         events: mergeEvents(c.events, action.events),
         extracted: true,
+        meeting: detectMeeting(c.text, c.term),
       }))
+    case 'setMeetingIncluded':
+      return mapCourse(state, action.courseId, (c) => ({ ...c, meetingIncluded: action.include }))
     case 'extractAll':
       return {
         ...state,
         courses: state.courses.map((c) =>
-          c.text.trim() ? { ...c, events: mergeEvents(c.events, extractEvents(c.text, c.term)), extracted: true } : c,
+          c.text.trim()
+            ? { ...c, events: mergeEvents(c.events, extractEvents(c.text, c.term)), extracted: true, meeting: detectMeeting(c.text, c.term) }
+            : c,
         ),
       }
     case 'addFromFiles': {
@@ -90,7 +101,7 @@ export function reducer(state: State, action: Action): State {
         const base = blank ? courses.pop()! : newCourse()
         const name = base.name.trim() || f.name
         const events = mergeEvents(base.events, extractEvents(f.text, base.term))
-        courses.push({ ...base, name, text: f.text, events, extracted: true })
+        courses.push({ ...base, name, text: f.text, events, extracted: true, meeting: detectMeeting(f.text, base.term) })
       }
       return { ...state, courses }
     }
@@ -146,7 +157,18 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
     include: e.include !== false,
     origDate: isStr(e.origDate) ? e.origDate : undefined,
     origTitle: isStr(e.origTitle) ? e.origTitle : undefined,
+    source: isStr(e.source) ? e.source : undefined,
   }
+}
+
+const DAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])
+function sanitizeMeeting(raw: unknown): Meeting | null {
+  if (!raw || typeof raw !== 'object') return null
+  const m = raw as Record<string, unknown>
+  if (!Array.isArray(m.days) || !isStr(m.start) || !isStr(m.end) || !isStr(m.firstDate) || !isStr(m.untilDate)) return null
+  const days = m.days.filter((d): d is Meeting['days'][number] => isStr(d) && DAYS.has(d))
+  if (days.length === 0) return null
+  return { days, start: m.start, end: m.end, location: isStr(m.location) ? m.location : undefined, firstDate: m.firstDate, untilDate: m.untilDate }
 }
 
 function sanitizeCourse(raw: unknown): Course | null {
@@ -166,6 +188,8 @@ function sanitizeCourse(raw: unknown): Course | null {
     text: isStr(c.text) ? c.text : '',
     events,
     extracted: c.extracted === true,
+    meeting: sanitizeMeeting(c.meeting),
+    meetingIncluded: c.meetingIncluded !== false,
   }
 }
 

@@ -9,9 +9,22 @@ export type CalendarEvent = {
   /** What extraction originally produced, so re-runs can match rows the user has edited. */
   origDate?: string
   origTitle?: string
+  /** The syllabus line the event came from, shown as the calendar description. */
+  source?: string
 }
 
-export type CourseEvents = { name: string; events: CalendarEvent[] }
+/** A weekly class meeting, emitted as one recurring event. */
+export type Meeting = {
+  days: Weekday[]
+  start: string // HH:MM
+  end: string // HH:MM
+  location?: string
+  firstDate: string // YYYY-MM-DD, first occurrence on or after term start
+  untilDate: string // YYYY-MM-DD, last day of the term
+}
+export type Weekday = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'
+
+export type CourseEvents = { name: string; events: CalendarEvent[]; meeting?: Meeting | null }
 
 export type Reminder = '1d' | '2d' | 'morning' | 'none'
 export const REMINDERS: { value: Reminder; label: string }[] = [
@@ -36,7 +49,7 @@ function trigger(r: Reminder, allDay: boolean): string | null {
 }
 
 export function escapeIcs(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
 }
 
 /** Fold at 75 octets per RFC 5545 §3.1. */
@@ -107,6 +120,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
         lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.date))}`)
       }
       lines.push(`SUMMARY:${escapeIcs(`${course.name}: ${ev.title}`)}`)
+      if (ev.source && ev.source.trim() !== ev.title.trim()) lines.push(`DESCRIPTION:${escapeIcs(ev.source.trim())}`)
       const trig = trigger(reminder, !ev.time)
       if (trig) {
         lines.push('BEGIN:VALARM')
@@ -117,6 +131,19 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
       }
       lines.push('END:VEVENT')
     }
+  }
+  for (const course of courses) {
+    const m = course.meeting
+    if (!m || m.days.length === 0) continue
+    lines.push('BEGIN:VEVENT')
+    lines.push(`UID:meeting-${course.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}@syllabify.app`)
+    lines.push(`DTSTAMP:${now}`)
+    lines.push(`DTSTART:${compact(m.firstDate)}T${m.start.replace(':', '')}00`)
+    lines.push(`DTEND:${compact(m.firstDate)}T${m.end.replace(':', '')}00`)
+    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${m.days.join(',')};UNTIL=${compact(m.untilDate)}T235959`)
+    lines.push(`SUMMARY:${escapeIcs(course.name)}`)
+    if (m.location) lines.push(`LOCATION:${escapeIcs(m.location)}`)
+    lines.push('END:VEVENT')
   }
   lines.push('END:VCALENDAR')
   return lines.map(foldLine).join('\r\n') + '\r\n'

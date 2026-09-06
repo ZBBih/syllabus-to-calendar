@@ -85,7 +85,7 @@ export function extractEvents(text: string, term: Term): ExtractedEvent[] {
       ? `${String(timed.get('hour')).padStart(2, '0')}:${String(timed.get('minute') ?? 0).padStart(2, '0')}`
       : undefined
 
-    found.push({ id: newId(), date: iso(start), time, title, confidence, reason, include: true, origDate: iso(start), origTitle: title })
+    found.push({ id: newId(), date: iso(start), time, title, confidence, reason, include: true, origDate: iso(start), origTitle: title, source: lines[i - (reason === 'date only' ? 1 : 0)] })
   }
 
   const seen = new Set<string>()

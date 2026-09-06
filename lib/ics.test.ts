@@ -22,7 +22,7 @@ describe('buildIcs', () => {
   it('escapes and folds and uses CRLF', () => {
     const long = 'A'.repeat(120)
     const out = buildIcs([{ name: 'ECON 101', events: [{ ...base, date: '2026-09-14', title: `Midterm, part 1; ${long}` }] }])
-    expect(out).toContain('SUMMARY:ECON 101: Midterm\\, part 1\; ')
+    expect(out).toContain('SUMMARY:ECON 101: Midterm\\, part 1\\; ')
     for (const line of out.split('\r\n')) expect(Buffer.byteLength(line)).toBeLessThanOrEqual(75)
     expect(out.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true)
     expect(out.endsWith('END:VCALENDAR\r\n')).toBe(true)
@@ -37,6 +37,28 @@ describe('reminders', () => {
 })
 
 describe('helpers', () => {
-  it('escapeIcs', () => expect(escapeIcs('a,b;c\\d\ne')).toBe('a\\,b\;c\\\\d\\ne'))
+  it('escapeIcs escapes backslash, semicolon, comma, newline', () => {
+    expect(escapeIcs('a,b;c\\d\ne')).toBe('a\\,b\\;c\\\\d\\ne')
+    expect(escapeIcs('Room 204; bring laptop')).toBe('Room 204\\; bring laptop')
+  })
+  it('writes a DESCRIPTION from the source line when it adds information', () => {
+    const out = buildIcs([{ name: 'A', events: [{ ...base, date: '2026-09-14', title: 'Quiz', source: 'Sept 14: Quiz; bring a pencil' }] }])
+    expect(out).toContain('DESCRIPTION:Sept 14: Quiz\\; bring a pencil')
+    const same = buildIcs([{ name: 'A', events: [{ ...base, date: '2026-09-14', title: 'Quiz', source: 'Quiz' }] }])
+    expect(same).not.toContain('DESCRIPTION:Quiz')
+  })
+  it('emits a weekly recurring meeting with location', () => {
+    const out = buildIcs([
+      {
+        name: 'ECON 101',
+        events: [],
+        meeting: { days: ['MO', 'WE', 'FR'], start: '10:00', end: '10:50', location: 'Olin 204', firstDate: '2026-08-17', untilDate: '2026-12-11' },
+      },
+    ])
+    expect(out).toContain('RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20261211T235959')
+    expect(out).toContain('DTSTART:20260817T100000')
+    expect(out).toContain('LOCATION:Olin 204')
+    expect(out).toContain('SUMMARY:ECON 101')
+  })
   it('foldLine keeps short lines', () => expect(foldLine('short')).toBe('short'))
 })
