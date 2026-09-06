@@ -11,7 +11,8 @@ export type Course = {
   extracted: boolean
 }
 
-export type State = { courses: Course[]; reminder: Reminder }
+export type Step = 1 | 2 | 3
+export type State = { courses: Course[]; reminder: Reminder; step: Step; activeCourseId: string | null }
 
 export type Action =
   | { type: 'add' }
@@ -25,6 +26,9 @@ export type Action =
   | { type: 'addEvent'; courseId: string }
   | { type: 'deleteEvent'; courseId: string; eventId: string }
   | { type: 'setReminder'; reminder: Reminder }
+  | { type: 'setStep'; step: Step }
+  | { type: 'setActive'; id: string | null }
+  | { type: 'setIncludeAll'; courseId: string; include: boolean }
   | { type: 'clear' }
   | { type: 'hydrate'; state: State }
 
@@ -44,7 +48,7 @@ export function newCourse(): Course {
 }
 
 export function initialState(): State {
-  return { courses: [newCourse()], reminder: '1d' }
+  return { courses: [newCourse()], reminder: '1d', step: 1, activeCourseId: null }
 }
 
 function mapCourse(state: State, id: string, fn: (c: Course) => Course): State {
@@ -55,9 +59,11 @@ export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'add':
       return { ...state, courses: [...state.courses, newCourse()] }
-    case 'remove':
+    case 'remove': {
       if (state.courses.length <= 1) return state
-      return { ...state, courses: state.courses.filter((c) => c.id !== action.id) }
+      const courses = state.courses.filter((c) => c.id !== action.id)
+      return { ...state, courses, activeCourseId: state.activeCourseId === action.id ? null : state.activeCourseId }
+    }
     case 'update':
       return mapCourse(state, action.id, (c) => ({ ...c, ...action.patch }))
     case 'setEvents':
@@ -90,6 +96,12 @@ export function reducer(state: State, action: Action): State {
     }
     case 'setReminder':
       return { ...state, reminder: action.reminder }
+    case 'setStep':
+      return { ...state, step: action.step }
+    case 'setActive':
+      return { ...state, activeCourseId: action.id }
+    case 'setIncludeAll':
+      return mapCourse(state, action.courseId, (c) => ({ ...c, events: c.events.map((e) => ({ ...e, include: action.include })) }))
     case 'updateEvent':
       return mapCourse(state, action.courseId, (c) => ({
         ...c,
@@ -165,7 +177,9 @@ export function sanitize(raw: unknown): State | null {
   const courses = s.courses.map(sanitizeCourse).filter((c): c is Course => c !== null)
   if (courses.length === 0) return null
   const reminder = isStr(s.reminder) && REMINDERS.has(s.reminder) ? (s.reminder as Reminder) : '1d'
-  return { courses, reminder }
+  const step: Step = s.step === 2 || s.step === 3 ? s.step : 1
+  const activeCourseId = isStr(s.activeCourseId) && courses.some((c) => c.id === s.activeCourseId) ? s.activeCourseId : null
+  return { courses, reminder, step, activeCourseId }
 }
 
 export function load(): State | null {

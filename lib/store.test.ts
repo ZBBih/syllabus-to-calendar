@@ -87,3 +87,29 @@ describe('sanitize', () => {
     expect(s.reminder).toBe('1d')
   })
 })
+
+describe('flow state', () => {
+  it('starts on step 1 with no active course and persists step/active through sanitize', () => {
+    const s = initialState()
+    expect(s.step).toBe(1)
+    expect(s.activeCourseId).toBeNull()
+    const s2 = reducer(reducer(s, { type: 'setStep', step: 3 }), { type: 'setActive', id: s.courses[0].id })
+    const back = sanitize(JSON.parse(JSON.stringify(s2)))!
+    expect(back.step).toBe(3)
+    expect(back.activeCourseId).toBe(s.courses[0].id)
+    expect(sanitize({ courses: [{ id: 'c' }], step: 9, activeCourseId: 'ghost' })).toMatchObject({ step: 1, activeCourseId: null })
+  })
+  it('setIncludeAll flips every row and removing the active course clears it', () => {
+    let s = reducer(initialState(), { type: 'update', id: initialState().courses[0].id, patch: {} })
+    const id = s.courses[0].id
+    s = reducer(s, { type: 'setEvents', id, events: [
+      { id: 'a', date: '2026-09-01', title: 'A', confidence: 'high', include: true },
+      { id: 'b', date: '2026-09-02', title: 'B', confidence: 'high', include: true },
+    ] })
+    s = reducer(s, { type: 'setIncludeAll', courseId: id, include: false })
+    expect(s.courses[0].events.every((e) => e.include === false)).toBe(true)
+    s = reducer(reducer(s, { type: 'add' }), { type: 'setActive', id })
+    s = reducer(s, { type: 'remove', id })
+    expect(s.activeCourseId).toBeNull()
+  })
+})
