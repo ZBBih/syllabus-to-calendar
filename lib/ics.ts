@@ -87,7 +87,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//syllabus-to-calendar//EN',
+    'PRODID:-//Syllabify//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
   ]
@@ -96,7 +96,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): st
     for (const ev of course.events) {
       if (ev.include === false) continue
       lines.push('BEGIN:VEVENT')
-      lines.push(`UID:${ev.id}@syllabus-to-calendar`)
+      lines.push(`UID:${ev.id}@syllabify.app`)
       lines.push(`DTSTAMP:${now}`)
       if (ev.time) {
         const end = plusHour(ev.date, ev.time)

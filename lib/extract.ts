@@ -22,13 +22,21 @@ export function termReferenceDate(term: Term): Date {
 const DAY = 86_400_000
 const TRIM = /^[\s\-–—:|•*.,]+|[\s\-–—:|•*.,]+$/g
 const WEEKDAY = /^(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*\.?\s*/i
+const WEEK_PREFIX = /^(week|wk|unit|module|session|class|lecture|day)\s*#?\d+[:.\-–—]?\s*/i
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function cleanTitle(s: string) {
-  return s.replace(/\s+/g, ' ').replace(TRIM, '').replace(WEEKDAY, '').replace(TRIM, '').trim()
+  return s
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([,;:])\s*(?:[,;:]\s*)+/g, '$1 ')
+    .replace(/\s+\b(at|on|by)\s*$/i, '')
+    .replace(TRIM, '')
+    .replace(WEEKDAY, '')
+    .replace(TRIM, '')
+    .trim()
 }
 
 let counter = 0
@@ -45,7 +53,7 @@ export function extractEvents(text: string, term: Term): ExtractedEvent[] {
   const found: ExtractedEvent[] = []
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+    const line = lines[i].replace(WEEK_PREFIX, '')
     const results = chrono.parse(line, ref, { forwardDate: true })
     if (results.length === 0) continue
 

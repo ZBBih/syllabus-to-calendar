@@ -51,6 +51,13 @@ describe('extractEvents', () => {
     expect(out.map((e) => e.date)).toEqual(['2026-09-01', '2026-10-09'])
   })
 
+  it('ignores a leading Week N so the number is not read as a day or year', () => {
+    const out = extractEvents('Week 3  Sept 16  Quiz 1 (chapters 1-3)\nWeek 7 Oct 14 Midterm exam, 10am, Room 204', fall)
+    expect(out).toHaveLength(2)
+    expect(out[0]).toMatchObject({ date: '2026-09-16', title: 'Quiz 1 (chapters 1-3)' })
+    expect(out[1]).toMatchObject({ date: '2026-10-14', time: '10:00', title: 'Midterm exam, Room 204' })
+  })
+
   it('date range emits one event on the start date', () => {
     const [e, ...rest] = extractEvents('Sept 14-16: Field trip', fall)
     expect(e.date).toBe('2026-09-14')

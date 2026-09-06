@@ -3,8 +3,8 @@
 import { useState, type Dispatch } from 'react'
 import { extractEvents, SEASONS, type Season } from '@/lib/extract'
 import type { Action, Course } from '@/lib/store'
-import { FileDrop } from './file-drop'
 import { nameFromFileName } from '@/lib/course-name'
+import { FileDrop } from './file-drop'
 
 const thisYear = new Date().getFullYear()
 const YEARS = [thisYear - 1, thisYear, thisYear + 1]
@@ -28,8 +28,8 @@ export function CourseCard({
   function report(found: number, verb = 'Found') {
     setNotice(
       found === 0
-        ? 'No dates found. Check the term and try pasting just the schedule section.'
-        : `${verb} ${found} date${found === 1 ? '' : 's'}. Review them in step 2.`,
+        ? 'No dates found. Check the term, or paste just the schedule section.'
+        : `${verb} ${found} date${found === 1 ? '' : 's'}. They are waiting in step 2.`,
     )
   }
 
@@ -40,15 +40,14 @@ export function CourseCard({
   }
 
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="card rise p-5 sm:p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Class {index + 1}</h3>
+        <h3 className="font-display text-lg font-extrabold">
+          <span className="text-muted">Class {index + 1}</span>
+          {course.name.trim() && <span className="ml-2">{course.name.trim()}</span>}
+        </h3>
         {canRemove && (
-          <button
-            type="button"
-            onClick={() => dispatch({ type: 'remove', id: course.id })}
-            className="text-sm text-zinc-500 hover:text-red-600"
-          >
+          <button type="button" onClick={() => dispatch({ type: 'remove', id: course.id })} className="btn btn-ghost px-3 py-1 text-xs">
             Remove
           </button>
         )}
@@ -56,27 +55,28 @@ export function CourseCard({
 
       <div className="grid gap-4 sm:grid-cols-[1fr_auto_auto]">
         <label className="block text-sm">
-          <span className="font-medium">Class name</span>
+          <span className="font-semibold">Class name</span>
           <input
             value={course.name}
             onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { name: e.target.value } })}
             onBlur={() => setTouched(true)}
             placeholder="e.g. ECON 101"
-            className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2"
+            className="field mt-1"
           />
-          {touched && nameMissing && <span className="text-xs text-red-600">Required. It becomes the prefix on every event.</span>}
-          {!nameMissing && (
-            <span className="text-xs text-zinc-500">Events will look like “{course.name.trim()}: Midterm”</span>
+          {touched && nameMissing ? (
+            <span className="text-xs font-medium text-danger">Required. It becomes the prefix on every event.</span>
+          ) : (
+            <span className="text-xs text-muted">
+              {nameMissing ? 'Shows in your calendar as “Name: Midterm”' : `Shows as “${course.name.trim()}: Midterm”`}
+            </span>
           )}
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Term</span>
+          <span className="font-semibold">Term</span>
           <select
             value={course.term.season}
-            onChange={(e) =>
-              dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, season: e.target.value as Season } } })
-            }
-            className="mt-1 block rounded-md border border-zinc-300 px-3 py-2"
+            onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, season: e.target.value as Season } } })}
+            className="field mt-1"
           >
             {SEASONS.map((s) => (
               <option key={s}>{s}</option>
@@ -84,13 +84,11 @@ export function CourseCard({
           </select>
         </label>
         <label className="block text-sm">
-          <span className="font-medium">Year</span>
+          <span className="font-semibold">Year</span>
           <select
             value={course.term.year}
-            onChange={(e) =>
-              dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, year: Number(e.target.value) } } })
-            }
-            className="mt-1 block rounded-md border border-zinc-300 px-3 py-2"
+            onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, year: Number(e.target.value) } } })}
+            className="field mt-1"
           >
             {YEARS.map((y) => (
               <option key={y}>{y}</option>
@@ -109,34 +107,32 @@ export function CourseCard({
               dispatch({ type: 'mergeEvents', id: course.id, events })
               report(events.length)
             } else {
-              setNotice('File converted. Add a class name, then click Find dates.')
+              setNotice('File read. Add a class name, then click Find dates.')
             }
           }}
         />
       </div>
 
       <label className="mt-4 block text-sm">
-        <span className="font-medium">Syllabus text</span>
+        <span className="font-semibold">Syllabus text</span>
         <textarea
           value={course.text}
           onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { text: e.target.value } })}
           placeholder="Or paste your syllabus here. The schedule section is all it needs."
-          rows={8}
-          className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 font-mono text-xs"
+          rows={7}
+          className="field mt-1 font-mono text-xs"
         />
       </label>
 
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={findDates}
-          disabled={!canExtract}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
-        >
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={findDates} disabled={!canExtract} className="btn btn-primary">
           {course.extracted ? 'Re-run' : 'Find dates'}
         </button>
-        {!canExtract && <span className="text-xs text-zinc-500">Add a class name and some syllabus text first.</span>}
-        {notice && canExtract && <span className="text-sm text-zinc-700">{notice}</span>}
+        {!canExtract ? (
+          <span className="text-xs text-muted">Add a class name and some syllabus text first.</span>
+        ) : (
+          notice && <span className="pop text-sm font-medium">{notice}</span>
+        )}
       </div>
     </div>
   )

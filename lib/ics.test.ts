@@ -10,7 +10,7 @@ describe('buildIcs', () => {
     expect(out).toContain('DTEND;VALUE=DATE:20260915')
     expect(out).toContain('SUMMARY:ECON 101: Midterm')
     expect(out).toContain('TRIGGER:-P1D')
-    expect(out).toContain('UID:e1@syllabus-to-calendar')
+    expect(out).toContain('UID:e1@syllabify.app')
   })
 
   it('serialises a timed event as one hour floating', () => {

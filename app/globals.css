@@ -1,20 +1,244 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #fafafa;
-  --foreground: #171717;
+  --bg: #fffaf0;
+  --bg-elev: #ffffff;
+  --fg: #1c1917;
+  --muted: #78716c;
+  --line: #ece5d8;
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
+  --accent-soft: #fef3c7;
+  --accent-ink: #1c1917;
+  --ok: #16a34a;
+  --ok-soft: #dcfce7;
+  --danger: #dc2626;
+}
+
+.dark {
+  --bg: #16130f;
+  --bg-elev: #211d17;
+  --fg: #f5f0e6;
+  --muted: #a8a29e;
+  --line: #2f2922;
+  --accent: #fbbf24;
+  --accent-strong: #f59e0b;
+  --accent-soft: #3a2c0d;
+  --accent-ink: #1c1917;
+  --ok: #4ade80;
+  --ok-soft: #14361f;
+  --danger: #f87171;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-elev: var(--bg-elev);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --radius-xl2: 1.25rem;
 }
 
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  background-image:
+    radial-gradient(circle at 15% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 40%),
+    radial-gradient(circle at 90% 10%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 35%);
+  background-attachment: fixed;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.012);
+  }
+}
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+.rise {
+  animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pop {
+  animation: pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.breathe:hover {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+.wiggle:hover svg {
+  animation: wiggle 0.5s ease-in-out;
+}
+.stagger > * {
+  animation: rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.stagger > *:nth-child(n + 6) {
+  animation-delay: 200ms;
+}
+
+.card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 12px 32px -16px rgb(120 80 0 / 0.18);
+}
+.dark .card {
+  box-shadow: 0 12px 32px -16px rgb(0 0 0 / 0.6);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  padding: 0.625rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    background 0.12s ease,
+    opacity 0.12s ease;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 20px -10px color-mix(in oklab, var(--accent) 80%, black);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  transform: translateY(-1px);
+}
+.btn-secondary {
+  background: var(--bg-elev);
+  color: var(--fg);
+  border: 1.5px solid var(--line);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.btn-ghost {
+  color: var(--muted);
+}
+.btn-ghost:hover:not(:disabled) {
+  color: var(--fg);
+  background: color-mix(in oklab, var(--fg) 6%, transparent);
+}
+
+.field {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1.5px solid var(--line);
+  background: var(--bg-elev);
+  color: var(--fg);
+  padding: 0.55rem 0.8rem;
+  font-size: 0.9rem;
+  transition:
+    border-color 0.12s,
+    box-shadow 0.12s;
+}
+.field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 25%, transparent);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pop,
+  .stagger > *,
+  .breathe:hover,
+  .wiggle:hover svg {
+    animation: none !important;
+  }
+  .btn,
+  .field {
+    transition: none;
+  }
 }
