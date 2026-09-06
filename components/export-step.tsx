@@ -6,7 +6,7 @@ import type { Action, State } from '@/lib/store'
 import { exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
 import { previewRows } from './date-preview'
 import { Confetti } from './confetti'
-import { ArtCrop } from './art'
+import { ArtCrop } from './hero-art'
 import { ArrowLeft, Check, Upload } from './icons'
 
 const GUIDES = {

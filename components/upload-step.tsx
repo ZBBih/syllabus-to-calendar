@@ -8,7 +8,7 @@ import { FileDrop } from './file-drop'
 import { ClassRow } from './class-row'
 import { PasteSheet } from './paste-sheet'
 import { ArrowLeft, ArrowRight } from './icons'
-import { ArtCrop } from './art'
+import { ArtCrop } from './hero-art'
 
 /** Every class that has dates must be named, and at least one such class must exist. */
 export function canProceed(courses: Course[]) {

@@ -169,60 +169,48 @@ body {
     box-shadow: 0 0 0 14px transparent;
   }
 }
-@keyframes paper-in {
-  from {
-    opacity: 0;
-    transform: translate(-16px, 8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes card-fly {
+@keyframes fly-across {
   0% {
     opacity: 0;
-    transform: translate(var(--fly-x), var(--fly-y)) scale(0.6);
+    transform: translate(0, 0) scale(0.7);
   }
-  22% {
+  12% {
     opacity: 1;
+    transform: translate(8px, -2px) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(112px, -22px) scale(1);
+  }
+  86% {
+    opacity: 0;
+    transform: translate(132px, -28px) scale(0.75);
   }
   100% {
-    opacity: 1;
-    transform: none;
+    opacity: 0;
+    transform: translate(132px, -28px) scale(0.75);
   }
 }
-@keyframes calendar-in {
+@keyframes grow-line {
   from {
-    opacity: 0;
-    transform: translate(18px, 6px);
+    transform: scaleX(0);
   }
   to {
-    opacity: 1;
-    transform: none;
+    transform: scaleX(1);
   }
 }
-@keyframes day-fill {
+@keyframes cell-in {
   0% {
     opacity: 0;
-    transform: scale(0.3);
+    transform: scale(0.4);
   }
-  60% {
+  65% {
     opacity: 1;
-    transform: scale(1.16);
+    transform: scale(1.12);
   }
   100% {
     opacity: 1;
-    transform: none;
-  }
-}
-@keyframes card-drift {
-  0%,
-  100% {
-    transform: translate(0, 0);
-  }
-  50% {
-    transform: translate(0, -3px);
+    transform: scale(1);
   }
 }
 @keyframes crop-in {
@@ -425,59 +413,29 @@ body {
     isolation: isolate;
   }
   /*
-    The illustration. Drawn, not shipped, so it is the same colours as everything around it.
-
-    The sheet arrives, the calendar arrives, and then the dates fly the gap, each arrival
-    filling in a day. Distances are in the drawing's own units, so the whole thing scales with
-    the viewBox and nothing has to be recalculated per breakpoint.
+    The hero illustration: the syllabus on the left, its dates flying across into the calendar,
+    a day filling in for each one that lands. Inline SVG in the site's own tokens, so it is the
+    same flat material as everything around it and needs no second copy for the dark theme.
   */
-  .art-stage .art-card {
+  .hero-art .art-line {
+    transform-origin: 28px center;
+    animation: grow-line 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  /* Plays once and settles. A loop that never stops pulls the eye off the button. */
+  .hero-art .art-chip {
+    animation: fly-across 1.5s cubic-bezier(0.4, 0, 0.3, 1) 1 both;
+  }
+  .hero-art .art-cell {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: cell-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* The same shapes, still, in the smaller spots. */
+  .art-card {
     fill: var(--elev);
     stroke: var(--line-strong);
     stroke-width: 2;
-  }
-  .art-document {
-    animation: paper-in 0.6s cubic-bezier(0.22, 0.7, 0.28, 1) 0.05s both;
-  }
-  .art-calendar {
-    animation: calendar-in 0.6s cubic-bezier(0.22, 0.7, 0.28, 1) 0.28s both;
-  }
-  .art-chip {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation:
-      card-fly 0.9s cubic-bezier(0.22, 0.65, 0.28, 1) both,
-      card-drift 5.5s ease-in-out infinite;
-  }
-  .art-card1 {
-    animation-delay: 0.72s, 3.1s;
-  }
-  .art-card2 {
-    animation-delay: 0.96s, 3.4s;
-  }
-  .art-card3 {
-    animation-delay: 1.2s, 3.7s;
-  }
-  /*
-    A day fills as its date arrives, which is the beat the picture is for. The delays are each
-    date's delay plus its flight, so a change to one has to be a change to the other.
-  */
-  .art-day {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: day-fill 0.4s cubic-bezier(0.34, 1.3, 0.5, 1) both;
-  }
-  .art-day1 {
-    animation-delay: 1.5s;
-  }
-  .art-day2 {
-    animation-delay: 1.74s;
-  }
-  .art-day3 {
-    animation-delay: 1.98s;
-  }
-  .art-day4 {
-    animation-delay: 2.24s;
   }
 
   /* The cropped halves, on the classes screen, the export payoff and the 404. */
@@ -645,10 +603,9 @@ body {
     .pop-in,
     .ring-once,
     .float,
-    .art-document,
-    .art-calendar,
-    .art-chip,
-    .art-day,
+    .hero-art .art-line,
+    .hero-art .art-chip,
+    .hero-art .art-cell,
     .crop-in,
     .arrow-nudge,
     .draw-check path {
@@ -657,10 +614,11 @@ body {
     .draw-check path {
       stroke-dashoffset: 0;
     }
-    .art-document,
-    .art-calendar,
-    .art-chip,
-    .art-day {
+    .hero-art .art-chip {
+      opacity: 0;
+    }
+    .hero-art .art-line,
+    .hero-art .art-cell {
       opacity: 1;
       transform: none;
     }

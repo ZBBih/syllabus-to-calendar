@@ -5,10 +5,16 @@ as they arrive. It is the product in one line, which is why the same drawing ser
 hero, the classes screen, the export payoff, the 404 and the link preview: the smaller spots
 crop to one half rather than needing art of their own.
 
-It is drawn, not shipped as a picture. `lib/art.ts` holds the geometry, `components/art.tsx`
+It is drawn, not shipped as a picture. `lib/art.ts` holds the geometry, `components/hero-art.tsx`
 draws it, and every colour is a token, so it changes with the theme without a second copy of
 anything, stays sharp at any size, weighs a couple of kilobytes inside the HTML, and comes apart
-for animation without any slicing.
+for animation without any slicing. The cropped halves are a viewBox onto the same drawing rather
+than art of their own, so the two cannot drift apart.
+
+The link preview is the one exception: it renders outside a browser, where the palette's custom
+properties do not exist and the renderer will not take markup grouped for animation it has no
+notion of. It draws its own flat copy from the same constants, so the geometry still cannot
+drift even though the markup differs.
 
 ## Why not the render
 
@@ -34,14 +40,10 @@ matched. The style was the mismatch, not the palette.
 
 ## The animation
 
-The sheet arrives, the calendar arrives, and then the three dates fly the distance from the
-syllabus to their places, one after another, each arrival colouring in a day. The travel and the
-fill are the whole point: a shape that fades in where it already sits reads as a picture
-loading, while a date that leaves one object and changes another reads as the product working.
-
-A fourth day fills at the end, so the calendar keeps going for a beat rather than stopping dead
-with the animation. The fill delays are each date's delay plus its flight, so the two cannot
-drift apart unnoticed.
+The printed lines draw themselves in, three dates leave the syllabus one after another and cross
+the gap, and days fill in on the calendar behind them. The travel and the fill are the whole
+point: a shape that fades in where it already sits reads as a picture loading, while a date that
+leaves one object and changes another reads as the product working.
 
 It plays once and settles, because a loop beside a call to action competes with it, and it is
 off entirely under `prefers-reduced-motion`.

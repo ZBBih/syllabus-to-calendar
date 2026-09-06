@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArtCrop } from '@/components/art'
+import { ArtCrop } from '@/components/hero-art'
 
 export default function NotFound() {
   return (

@@ -1,81 +1,106 @@
 /**
- * The illustration.
+ * The illustration's geometry and palette.
  *
- * Flat shapes in the site's own tokens, drawn as SVG rather than shipped as a picture. A
- * generated render was tried first and is in git history: it looked good on its own and wrong
- * on the page, because a photograph of textured paper with real shadows cannot sit on a flat,
- * crisp interface no matter how carefully its colours are matched. Retoning it only moved the
- * problem; the style was the problem.
+ * The drawing itself is components/hero-art.tsx. What lives here is the data it is built from,
+ * so the link preview can draw the same shapes and the tests can check them without rendering
+ * anything.
  *
- * Drawing it instead means it inherits light and dark for free, stays sharp at any size, weighs
- * a couple of kilobytes inside the HTML, and can be taken apart for animation without any
- * slicing.
- *
- * The composition is the product in one line: the syllabus on the left, three dates crossing the
- * middle, the calendar on the right filling in as they arrive. The smaller spots crop to one
- * half rather than needing art of their own.
+ * A generated cut-paper render was built out fully in place of this and is in git history. It
+ * looked good on its own and wrong on the page: a photograph of textured paper with real drop
+ * shadows cannot sit on a flat, crisp interface, however carefully its colours are matched. See
+ * docs/illustration.md, which records what it took to find that out.
  */
+
+/** The drawing's own coordinate space. */
+export const ART_WIDTH = 380;
+export const ART_HEIGHT = 190;
 
 export const ART_ALT =
   "A syllabus on the left, its dates flying across into a calendar on the right";
 
-/** The drawing's own coordinate space. Everything below is in these units. */
-export const ART_WIDTH = 480;
-export const ART_HEIGHT = 360;
-
-/** The syllabus. */
-export const SHEET = { x: 12, y: 40, w: 142, h: 280, r: 12 };
-
-/** Its printed lines: distance down from the top of the sheet, and how wide. */
+/** The syllabus, and its printed lines: distance down the page, and how wide. */
+export const SHEET = { x: 14, y: 20, w: 104, h: 150 };
 export const SHEET_LINES = [
-  { y: 74, w: 96 },
-  { y: 96, w: 118 },
-  { y: 118, w: 78 },
-  { y: 140, w: 110 },
-  { y: 162, w: 88 },
-  { y: 184, w: 116 },
-  { y: 206, w: 70 },
+  { y: 40, w: 58 },
+  { y: 52, w: 74 },
+  { y: 64, w: 46 },
+  { y: 76, w: 68 },
+  { y: 88, w: 52 },
+  { y: 100, w: 70 },
 ];
 
-/** The calendar. */
-export const CAL = { x: 286, y: 52, w: 182, h: 256, r: 14, header: 46 };
-
-/** Its grid of days. */
-export const GRID = { cols: 5, rows: 4, size: 26, gap: 8, top: 74, left: 296 };
+/** The calendar, and the grid of days inside it. */
+export const CAL = { x: 234, y: 26, w: 132, h: 138, header: 28 };
+export const GRID = {
+  cols: 5,
+  rows: 4,
+  size: 17,
+  pitch: 23,
+  left: 246,
+  top: 66,
+};
 
 export function dayBox(col: number, row: number) {
   return {
-    x: GRID.left + col * (GRID.size + GRID.gap),
-    y: CAL.y + GRID.top + row * (GRID.size + GRID.gap),
+    x: GRID.left + col * GRID.pitch,
+    y: GRID.top + row * GRID.pitch,
     size: GRID.size,
   };
 }
 
-/**
- * The days that get marked, and the date that marks each one.
- *
- * Three dates leave the syllabus and three days fill in, one per arrival. A fourth fills at the
- * end, so the calendar keeps going for a beat after the last one lands rather than stopping dead
- * with the animation.
- */
-export const MARKED = [
-  { col: 3, row: 0, chip: 0 },
-  { col: 1, row: 1, chip: 1 },
-  { col: 4, row: 2, chip: 2 },
-  { col: 2, row: 3, chip: null },
+/** The days that fill in, and the order they do it in. */
+export const FILLED: { col: number; row: number; order: number }[] = [
+  { col: 1, row: 0, order: 0 },
+  { col: 3, row: 1, order: 1 },
+  { col: 0, row: 2, order: 2 },
+  { col: 4, row: 2, order: 3 },
+  { col: 2, row: 3, order: 4 },
 ];
 
-/**
- * The dates in flight, at rest.
- *
- * They sit between the two objects, already out of the syllabus and not yet on the calendar,
- * which is the state the picture has to hold when nothing is moving.
- */
-export const CHIPS = [
-  { x: 176, y: 92, w: 74, h: 32 },
-  { x: 192, y: 152, w: 74, h: 32 },
-  { x: 178, y: 212, w: 74, h: 32 },
-];
+/** A date in transit, at the start of its flight. It crosses the gap and lands on the calendar. */
+export const CHIP = { x: 126, y: 82, w: 44, h: 20 };
 
-/** Where a date starts: on the sheet, over its own printed line. */
-export const CHIP_ORIGIN = { x: 34, y: 108 };
+/**
+ * What each half is, for the spots that show only one.
+ *
+ * A little air is left around each so a crop does not look sheared off at the edge.
+ */
+export const CROP = {
+  document: `${SHEET.x - 8} ${SHEET.y - 10} ${SHEET.w + 16} ${SHEET.h + 20}`,
+  calendar: `${CAL.x - 10} ${CAL.y - 16} ${CAL.w + 20} ${CAL.h + 32}`,
+} as const;
+export type ArtPart = keyof typeof CROP;
+
+/**
+ * The colours, named once.
+ *
+ * On the site these are the palette's own custom properties, so the drawing changes with the
+ * theme and needs no second copy. The link preview renders outside a browser, where custom
+ * properties do not exist, so it passes the light palette's values in literally.
+ */
+export type ArtInk = {
+  surface: string;
+  line: string;
+  sunk: string;
+  accent: string;
+  deep: string;
+  ink: string;
+};
+
+export const THEME_INK: ArtInk = {
+  surface: "var(--elev)",
+  line: "var(--line-strong)",
+  sunk: "var(--sunk)",
+  accent: "var(--accent)",
+  deep: "var(--accent-strong)",
+  ink: "var(--accent-ink)",
+};
+
+export const LIGHT_INK: ArtInk = {
+  surface: "#ffffff",
+  line: "#d4cec0",
+  sunk: "#f4f2ec",
+  accent: "#0d7a5c",
+  deep: "#085d46",
+  ink: "#ffffff",
+};

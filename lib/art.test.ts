@@ -3,29 +3,23 @@ import {
   ART_HEIGHT,
   ART_WIDTH,
   CAL,
-  CHIPS,
-  CHIP_ORIGIN,
+  CHIP,
+  CROP,
+  FILLED,
   GRID,
-  MARKED,
   SHEET,
+  SHEET_LINES,
   dayBox,
 } from "./art";
 
 describe("the illustration", () => {
-  it("reads left to right: syllabus, dates in transit, calendar", () => {
-    const sheetRight = SHEET.x + SHEET.w;
-    for (const c of CHIPS) {
-      expect(c.x).toBeGreaterThan(sheetRight);
-      expect(c.x + c.w).toBeLessThan(CAL.x);
-    }
+  it("reads left to right: syllabus, a date in transit, calendar", () => {
+    expect(CHIP.x).toBeGreaterThan(SHEET.x + SHEET.w);
+    expect(CHIP.x + CHIP.w).toBeLessThan(CAL.x);
   });
 
   it("keeps everything inside the frame", () => {
-    const boxes = [
-      { x: SHEET.x, y: SHEET.y, w: SHEET.w, h: SHEET.h },
-      { x: CAL.x, y: CAL.y - 12, w: CAL.w, h: CAL.h + 12 },
-      ...CHIPS,
-    ];
+    const boxes = [SHEET, { ...CAL, y: CAL.y - 10, h: CAL.h + 10 }, CHIP];
     for (const b of boxes) {
       expect(b.x).toBeGreaterThanOrEqual(0);
       expect(b.y).toBeGreaterThanOrEqual(0);
@@ -34,14 +28,10 @@ describe("the illustration", () => {
     }
   });
 
-  it("starts every date on the sheet, so it has the gap to cross", () => {
-    for (let i = 0; i < CHIPS.length; i++) {
-      const x = CHIP_ORIGIN.x;
-      const y = CHIP_ORIGIN.y + i * 34;
-      expect(x).toBeGreaterThan(SHEET.x);
-      expect(x + CHIPS[i].w).toBeLessThan(SHEET.x + SHEET.w);
-      expect(y).toBeGreaterThan(SHEET.y);
-      expect(y + CHIPS[i].h).toBeLessThan(SHEET.y + SHEET.h);
+  it("keeps the printed lines on the page", () => {
+    for (const l of SHEET_LINES) {
+      expect(SHEET.x + 14 + l.w).toBeLessThan(SHEET.x + SHEET.w);
+      expect(SHEET.y + l.y + 12).toBeLessThan(SHEET.y + SHEET.h);
     }
   });
 
@@ -57,24 +47,26 @@ describe("the illustration", () => {
     }
   });
 
-  it("marks a day for every date in flight, plus one", () => {
-    expect(MARKED).toHaveLength(CHIPS.length + 1);
-    expect(MARKED.filter((m) => m.chip !== null).map((m) => m.chip)).toEqual([
-      0, 1, 2,
-    ]);
-  });
-
-  it("marks no day twice, and none outside the grid", () => {
-    const seen = new Set(MARKED.map((m) => `${m.col},${m.row}`));
-    expect(seen.size).toBe(MARKED.length);
-    for (const m of MARKED) {
-      expect(m.col).toBeLessThan(GRID.cols);
-      expect(m.row).toBeLessThan(GRID.rows);
+  it("fills no day twice, none outside the grid, and each in its own turn", () => {
+    expect(new Set(FILLED.map((f) => `${f.col},${f.row}`)).size).toBe(
+      FILLED.length,
+    );
+    for (const f of FILLED) {
+      expect(f.col).toBeLessThan(GRID.cols);
+      expect(f.row).toBeLessThan(GRID.rows);
     }
+    expect(FILLED.map((f) => f.order).sort((a, b) => a - b)).toEqual(
+      FILLED.map((_, i) => i),
+    );
   });
 
-  it("reads down the calendar, so the fills do not jump about", () => {
-    const rows = MARKED.map((m) => m.row);
-    expect([...rows].sort((a, b) => a - b)).toEqual(rows);
+  it("crops onto the drawing, not past it", () => {
+    for (const box of Object.values(CROP)) {
+      const [x, y, w, h] = box.split(" ").map(Number);
+      expect(x).toBeGreaterThanOrEqual(0);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(x + w).toBeLessThanOrEqual(ART_WIDTH);
+      expect(y + h).toBeLessThanOrEqual(ART_HEIGHT);
+    }
   });
 });

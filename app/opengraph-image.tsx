@@ -5,9 +5,10 @@ import {
   ART_HEIGHT,
   ART_WIDTH,
   CAL,
-  CHIPS,
+  CHIP,
+  FILLED,
   GRID,
-  MARKED,
+  LIGHT_INK as INK,
   SHEET,
   SHEET_LINES,
   dayBox,
@@ -24,18 +25,34 @@ export const contentType = "image/png";
 // public asset.
 const display = readFileSync(join(process.cwd(), "app", "og-display.ttf"));
 
-// The same drawing as the site's, at rest. Its colours are written out because this renders
-// outside the browser, where the palette's custom properties do not exist.
-const INK = {
-  paper: "#ffffff",
-  line: "#d4cec0",
-  sunk: "#f4f2ec",
-  accent: "#0d7a5c",
-  deep: "#085d46",
-  gold: "#f5b841",
-};
-
+/**
+ * The same drawing as the site's, at rest.
+ *
+ * It is drawn here rather than by importing the component for two reasons. This renders outside
+ * a browser, where the palette's custom properties do not exist, so every colour has to be a
+ * literal; and the renderer will not take the component's markup, which groups and labels things
+ * for animation it has no notion of. Both draw from the constants in lib/art, so the geometry
+ * cannot drift even though the markup differs.
+ */
 function Illustration({ width }: { width: number }) {
+  const cells = [];
+  for (let row = 0; row < GRID.rows; row++) {
+    for (let col = 0; col < GRID.cols; col++) {
+      const b = dayBox(col, row);
+      const on = FILLED.some((f) => f.col === col && f.row === row);
+      cells.push(
+        <rect
+          key={`${row}-${col}`}
+          x={b.x}
+          y={b.y}
+          width={b.size}
+          height={b.size}
+          rx="4"
+          fill={on ? INK.accent : INK.sunk}
+        />,
+      );
+    }
+  }
   return (
     <svg
       width={width}
@@ -47,119 +64,115 @@ function Illustration({ width }: { width: number }) {
         y={SHEET.y}
         width={SHEET.w}
         height={SHEET.h}
-        rx={SHEET.r}
-        fill={INK.paper}
+        rx="8"
+        fill={INK.surface}
         stroke={INK.line}
-        strokeWidth="2"
+        strokeWidth="1.5"
       />
-      <circle cx={SHEET.x + 30} cy={SHEET.y + 32} r="11" fill={INK.gold} />
       <rect
-        x={SHEET.x + 52}
-        y={SHEET.y + 26}
-        width="62"
-        height="10"
-        rx="5"
+        x={SHEET.x + 14}
+        y={SHEET.y + 14}
+        width="42"
+        height="7"
+        rx="3.5"
         fill={INK.accent}
       />
       {SHEET_LINES.map((l) => (
         <rect
           key={l.y}
-          x={SHEET.x + 20}
-          y={SHEET.y + l.y}
+          x={SHEET.x + 14}
+          y={SHEET.y + l.y + 12}
           width={l.w}
-          height="8"
-          rx="4"
+          height="5"
+          rx="2.5"
           fill={INK.line}
         />
       ))}
+      <rect
+        x={SHEET.x + 14}
+        y={SHEET.y + 112}
+        width="34"
+        height="5"
+        rx="2.5"
+        fill={INK.accent}
+        opacity="0.55"
+      />
+      <rect
+        x={SHEET.x + 14}
+        y={SHEET.y + 124}
+        width="52"
+        height="5"
+        rx="2.5"
+        fill={INK.line}
+      />
+
+      <rect
+        x={CHIP.x}
+        y={CHIP.y}
+        width={CHIP.w}
+        height={CHIP.h}
+        rx="6"
+        fill={INK.accent}
+      />
+      <rect
+        x={CHIP.x + 7}
+        y={CHIP.y + 7}
+        width="18"
+        height="3"
+        rx="1.5"
+        fill={INK.ink}
+        opacity="0.9"
+      />
+      <rect
+        x={CHIP.x + 29}
+        y={CHIP.y + 7}
+        width="8"
+        height="3"
+        rx="1.5"
+        fill={INK.ink}
+        opacity="0.6"
+      />
+      <rect
+        x={CHIP.x + 7}
+        y={CHIP.y + 13}
+        width="26"
+        height="3"
+        rx="1.5"
+        fill={INK.ink}
+        opacity="0.55"
+      />
 
       <rect
         x={CAL.x}
         y={CAL.y}
         width={CAL.w}
         height={CAL.h}
-        rx={CAL.r}
-        fill={INK.paper}
+        rx="10"
+        fill={INK.surface}
         stroke={INK.line}
-        strokeWidth="2"
+        strokeWidth="1.5"
       />
       <path
-        d={`M${CAL.x} ${CAL.y + CAL.r}a${CAL.r} ${CAL.r} 0 0 1 ${CAL.r} -${CAL.r}h${CAL.w - CAL.r * 2}a${CAL.r} ${CAL.r} 0 0 1 ${CAL.r} ${CAL.r}v${CAL.header - CAL.r}h-${CAL.w}z`}
+        d={`M${CAL.x} ${CAL.y + 10}a10 10 0 0 1 10 -10h${CAL.w - 20}a10 10 0 0 1 10 10v${CAL.header - 10}H${CAL.x}z`}
         fill={INK.accent}
       />
       <rect
-        x={CAL.x + 40}
-        y={CAL.y - 12}
-        width="14"
-        height="30"
-        rx="7"
+        x={CAL.x + 22}
+        y={CAL.y - 10}
+        width="8"
+        height="20"
+        rx="4"
         fill={INK.deep}
       />
       <rect
-        x={CAL.x + CAL.w - 54}
-        y={CAL.y - 12}
-        width="14"
-        height="30"
-        rx="7"
+        x={CAL.x + CAL.w - 30}
+        y={CAL.y - 10}
+        width="8"
+        height="20"
+        rx="4"
         fill={INK.deep}
       />
-      {Array.from({ length: GRID.rows }).flatMap((_, row) =>
-        Array.from({ length: GRID.cols }).map((_, col) => {
-          const b = dayBox(col, row);
-          const marked = MARKED.some((m) => m.col === col && m.row === row);
-          return (
-            <rect
-              key={`${row}-${col}`}
-              x={b.x}
-              y={b.y}
-              width={b.size}
-              height={b.size}
-              rx="7"
-              fill={marked ? INK.accent : INK.sunk}
-            />
-          );
-        }),
-      )}
-
-      {CHIPS.map((c, i) => (
-        <g key={i}>
-          <rect
-            x={c.x}
-            y={c.y}
-            width={c.w}
-            height={c.h}
-            rx="8"
-            fill={INK.accent}
-          />
-          <rect
-            x={c.x + 11}
-            y={c.y + 9}
-            width="26"
-            height="5"
-            rx="2.5"
-            fill="#ffffff"
-            opacity="0.92"
-          />
-          <rect
-            x={c.x + 43}
-            y={c.y + 9}
-            width="14"
-            height="5"
-            rx="2.5"
-            fill="#ffffff"
-            opacity="0.6"
-          />
-          <rect
-            x={c.x + 11}
-            y={c.y + 19}
-            width="40"
-            height="5"
-            rx="2.5"
-            fill="#ffffff"
-            opacity="0.55"
-          />
-        </g>
-      ))}
+      {cells}
     </svg>
   );
 }
@@ -178,7 +191,7 @@ export default function OpenGraphImage() {
         fontFamily: "Instrument Serif",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", width: 620 }}>
+      <div style={{ display: "flex", flexDirection: "column", width: 566 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <svg width="46" height="46" viewBox="0 0 64 64">
             <rect width="64" height="64" rx="16" fill="#0d7a5c" />
@@ -199,7 +212,7 @@ export default function OpenGraphImage() {
 
         <div
           style={{
-            fontSize: 66,
+            fontSize: 60,
             lineHeight: 1.04,
             letterSpacing: -2,
             marginTop: 26,
@@ -236,7 +249,7 @@ export default function OpenGraphImage() {
       </div>
 
       <div style={{ display: "flex", flex: 1, justifyContent: "flex-end" }}>
-        <Illustration width={460} />
+        <Illustration width={430} />
       </div>
     </div>,
     {
