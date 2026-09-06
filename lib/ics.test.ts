@@ -29,6 +29,13 @@ describe('buildIcs', () => {
   })
 })
 
+describe('reminders', () => {
+  const ev = { ...base, date: '2026-09-14', title: 'X' }
+  it('2 days before', () => expect(buildIcs([{ name: 'A', events: [ev] }], '2d')).toContain('TRIGGER:-P2D'))
+  it('morning of an all-day event is +8h', () => expect(buildIcs([{ name: 'A', events: [ev] }], 'morning')).toContain('TRIGGER:PT8H'))
+  it('none omits the alarm', () => expect(buildIcs([{ name: 'A', events: [ev] }], 'none')).not.toContain('VALARM'))
+})
+
 describe('helpers', () => {
   it('escapeIcs', () => expect(escapeIcs('a,b;c\\d\ne')).toBe('a\\,b\;c\\\\d\\ne'))
   it('foldLine keeps short lines', () => expect(foldLine('short')).toBe('short'))

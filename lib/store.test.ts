@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reducer, initialState, defaultTerm, type State } from './store'
+import { reducer, initialState, defaultTerm, sanitize, type State } from './store'
 
 describe('store', () => {
   it('starts with one course', () => {
@@ -64,5 +64,26 @@ describe('store: files and re-runs', () => {
     s = reducer(s, { type: 'extractAll' })
     expect(s.courses[0].extracted).toBe(true)
     expect(s.courses[1].extracted).toBe(false)
+  })
+})
+
+describe('sanitize', () => {
+  it('rejects garbage', () => {
+    expect(sanitize(null)).toBeNull()
+    expect(sanitize('x')).toBeNull()
+    expect(sanitize({ courses: 'nope' })).toBeNull()
+    expect(sanitize({ courses: [{ nope: 1 }] })).toBeNull()
+  })
+  it('drops malformed events and fills defaults', () => {
+    const s = sanitize({
+      courses: [{ id: 'c1', name: 5, term: { season: 'Mars', year: 'x' }, events: [{ id: 'e1', date: '2026-09-14', title: 'ok' }, { bad: true }, 7] }],
+      reminder: 'weird',
+    })!
+    expect(s.courses).toHaveLength(1)
+    expect(s.courses[0].name).toBe('')
+    expect(s.courses[0].term.season).toMatch(/Fall|Spring|Summer|Winter/)
+    expect(s.courses[0].events).toHaveLength(1)
+    expect(s.courses[0].events[0].include).toBe(true)
+    expect(s.reminder).toBe('1d')
   })
 })

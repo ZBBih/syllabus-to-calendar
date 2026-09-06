@@ -13,6 +13,14 @@ export class NoTextLayerError extends Error {
 }
 
 export const ACCEPT = '.pdf,.docx,.txt,.md'
+export const MAX_BYTES = 25 * 1024 * 1024
+
+export class FileTooLargeError extends Error {
+  constructor(size: number) {
+    super(`That file is ${(size / 1024 / 1024).toFixed(0)} MB. The limit is 25 MB; a syllabus PDF is usually under 5 MB.`)
+    this.name = 'FileTooLargeError'
+  }
+}
 
 export function normalizeText(s: string): string {
   return s.replace(/\r\n?/g, '\n').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
@@ -55,6 +63,7 @@ async function docxToText(file: File): Promise<string> {
 }
 
 export async function fileToText(file: File): Promise<string> {
+  if (file.size > MAX_BYTES) throw new FileTooLargeError(file.size)
   const ext = extOf(file)
   const mime = file.type
   if (ext === 'pdf' || mime === 'application/pdf') return pdfToText(file)

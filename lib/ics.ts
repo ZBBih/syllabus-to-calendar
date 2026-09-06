@@ -13,6 +13,28 @@ export type CalendarEvent = {
 
 export type CourseEvents = { name: string; events: CalendarEvent[] }
 
+export type Reminder = '1d' | '2d' | 'morning' | 'none'
+export const REMINDERS: { value: Reminder; label: string }[] = [
+  { value: '1d', label: '1 day before' },
+  { value: '2d', label: '2 days before' },
+  { value: 'morning', label: 'Morning of (8am)' },
+  { value: 'none', label: 'No reminder' },
+]
+
+function trigger(r: Reminder, allDay: boolean): string | null {
+  switch (r) {
+    case '1d':
+      return '-P1D'
+    case '2d':
+      return '-P2D'
+    case 'morning':
+      // All-day events start at 00:00, so +8h lands at 8am. Timed events: 8am same day relative to start is unknowable, use -PT0M... fall back to 1 hour before.
+      return allDay ? 'PT8H' : '-PT1H'
+    case 'none':
+      return null
+  }
+}
+
 export function escapeIcs(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
 }
@@ -61,7 +83,7 @@ function stamp() {
   return new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
 }
 
-export function buildIcs(courses: CourseEvents[]): string {
+export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d'): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -85,11 +107,14 @@ export function buildIcs(courses: CourseEvents[]): string {
         lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.date))}`)
       }
       lines.push(`SUMMARY:${escapeIcs(`${course.name}: ${ev.title}`)}`)
-      lines.push('BEGIN:VALARM')
-      lines.push('ACTION:DISPLAY')
-      lines.push(`DESCRIPTION:${escapeIcs(`${course.name}: ${ev.title}`)} is tomorrow`)
-      lines.push('TRIGGER:-P1D')
-      lines.push('END:VALARM')
+      const trig = trigger(reminder, !ev.time)
+      if (trig) {
+        lines.push('BEGIN:VALARM')
+        lines.push('ACTION:DISPLAY')
+        lines.push(`DESCRIPTION:${escapeIcs(`${course.name}: ${ev.title}`)}`)
+        lines.push(`TRIGGER:${trig}`)
+        lines.push('END:VALARM')
+      }
       lines.push('END:VEVENT')
     }
   }
