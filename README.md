@@ -68,6 +68,6 @@ Next.js 16 (App Router), React 19, Tailwind v4, [chrono-node](https://github.com
 - `app/manifest.ts`, `public/sw.js` PWA manifest and offline shell cache
 - `app/icon.svg`, `app/apple-icon.tsx`, `app/opengraph-image.tsx` favicon and link-preview image
 - `scripts/vendor-ocr.mjs` copies the recogniser's runtime files into `public/`
-- `scripts/recover-alpha.py`, `scripts/slice-art.py` one-off, recover transparency from a render and cut it into animatable pieces
+- `scripts/recover-alpha.py`, `scripts/slice-art.py`, `scripts/cells-art.py` one-off, recover transparency from a render, cut it into animatable pieces, and empty the calendar so its days can fill in
 - `docs/illustration.md` the artwork: where it came from, how it was cleaned, where it appears
 - `docs/reviews/` improvement reviews and the competitor audit

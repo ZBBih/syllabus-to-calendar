@@ -1,4 +1,4 @@
-const CACHE = 'syllabify-v3'
+const CACHE = 'syllabify-v4'
 const SHELL = ['/', '/icon.svg', '/manifest.webmanifest']
 
 self.addEventListener('install', (e) => {

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import {
   ART_ALT,
+  ART_DAYS,
   ART_FOCUS,
   ART_HEIGHT,
   ART_PIECES,
@@ -26,6 +27,11 @@ import {
  * leaving one object and landing on another reads as the product working, which is the whole
  * job of the picture. Each card's start is derived from its own measured box (lib/art.ts) so
  * moving a piece cannot leave its flight path behind.
+ *
+ * Each arrival colours in a day on the calendar. That is the beat the whole picture exists for:
+ * not three shapes moving, but a date leaving a syllabus and a calendar changing because of it.
+ * The four marked days are separate sprites over an emptied grid (lib/art.ts) for exactly this
+ * reason; the render had them filled in from the first frame, which left nothing to cause.
  *
  * It plays once and settles, because a loop next to a call to action competes with it. What
  * remains afterwards is a few pixels of drift on the dates, enough that the section is not a
@@ -62,6 +68,23 @@ export function HeroArt({ className = "" }: { className?: string }) {
           />
         );
       })}
+      {ART_DAYS.map((day) => (
+        <Image
+          key={day.id}
+          src={day.src}
+          alt=""
+          width={day.px[0]}
+          height={day.px[1]}
+          sizes="60px"
+          className={`art-piece art-${day.id}`}
+          style={{
+            left: `${day.left}%`,
+            top: `${day.top}%`,
+            width: `${day.width}%`,
+            height: `${day.height}%`,
+          }}
+        />
+      ))}
     </div>
   );
 }

@@ -91,3 +91,19 @@ Everything is served through `next/image`, which re-encodes and sizes per device
 all five slices, comes to roughly 80 KB of WebP at the size it is drawn; the cropped halves reuse
 the single full-frame file. The link preview embeds its own 560 px copy and the display font from
 `app/`, because that renderer has no network at build time.
+
+## The calendar fills in
+
+The render arrived with four days already coloured. That is the right last frame and the wrong
+first one: nothing can be shown to *cause* a date to land if the date is there from the start,
+and cause is the only thing the picture has to say.
+
+`scripts/cells-art.py` lifts the four squares out as sprites and patches the holes behind them.
+The patch is a plain day copied from the same row of the same photograph, so the paper grain and
+the grid's tilt come with it rather than being imitated. Which plain day is a coordinate, not a
+guess: the grid is fitted from the four known squares as `centre = origin + col * across + row *
+down`, which reproduces them to within two thirds of a pixel, so any cell in the grid can be
+addressed. Compositing the emptied calendar and the four sprites back at their recorded places
+reproduces the render.
+
+In the hero the days fill one at a time, each on the beat a flying date arrives.
