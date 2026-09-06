@@ -27,6 +27,11 @@ describe('extractEvents', () => {
     expect(e).toMatchObject({ date: '2026-12-12', time: '14:00', confidence: 'high' })
   })
 
+  it('picks up a time that chrono parses separately', () => {
+    const [e] = extractEvents('Oct 12: Midterm exam at 2pm', fall)
+    expect(e).toMatchObject({ date: '2026-10-12', time: '14:00', title: 'Midterm exam' })
+  })
+
   it('date-only line takes next line as title', () => {
     const [e] = extractEvents('Nov 3\nEssay due', fall)
     expect(e).toMatchObject({ date: '2026-11-03', title: 'Essay due', confidence: 'low', reason: 'date only' })

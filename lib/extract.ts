@@ -72,8 +72,9 @@ export function extractEvents(text: string, term: Term): ExtractedEvent[] {
       reason = reason ?? 'no title found'
     }
 
-    const time = r.start.isCertain('hour')
-      ? `${String(r.start.get('hour')).padStart(2, '0')}:${String(r.start.get('minute') ?? 0).padStart(2, '0')}`
+    const timed = results.find((x) => x.start.isCertain('hour'))?.start
+    const time = timed
+      ? `${String(timed.get('hour')).padStart(2, '0')}:${String(timed.get('minute') ?? 0).padStart(2, '0')}`
       : undefined
 
     found.push({ id: newId(), date: iso(start), time, title, confidence, reason, include: true })

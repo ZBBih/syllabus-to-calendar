@@ -15,7 +15,7 @@ export class NoTextLayerError extends Error {
 export const ACCEPT = '.pdf,.docx,.txt,.md'
 
 export function normalizeText(s: string): string {
-  return s.replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return s.replace(/\r\n?/g, '\n').replace(/[ \t]{2,}/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 function extOf(file: File) {

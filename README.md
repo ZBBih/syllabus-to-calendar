@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Syllabus to Calendar
 
-## Getting Started
+Paste or upload your syllabi and download one `.ics` file that puts every deadline in your calendar. Runs entirely in your browser: no account, no API key, and nothing is uploaded anywhere.
 
-First, run the development server:
+## How it works
+
+1. **Your classes.** Start with Class 1. Give it a name (this becomes the prefix on every event, e.g. `ECON 101: Midterm`), pick the term, then drop in the syllabus as a PDF, Word (.docx), or text file, or paste the text. Add more classes with the button below.
+2. **Review dates.** Click **Find dates**. The app scans the text for dates and shows them in an editable table. Rows it is unsure about are highlighted in yellow. Fix, delete, or add rows as needed.
+3. **Download and import.** One button gives you `my-classes.ics` with every included event and a reminder the day before. Tabs below walk through importing into Google Calendar, Apple Calendar, and Outlook.
+
+Your classes are saved in your browser (localStorage) so a refresh does not lose your work.
+
+## Run it locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm test        # unit tests (vitest)
+npm run lint
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Stack
 
-## Learn More
+Next.js 15 (App Router), React 19, Tailwind v4, [chrono-node](https://github.com/wanasit/chrono) for date parsing, [pdf.js](https://mozilla.github.io/pdf.js/) for PDFs, [mammoth](https://github.com/mwilliamson/mammoth.js) for Word files.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/convert.ts` turns an uploaded file into plain text
+- `lib/extract.ts` turns text into dated events
+- `lib/ics.ts` turns events into an iCalendar file
+- `lib/store.ts` reducer and localStorage persistence
+- `components/` the three steps of the UI
+- `docs/superpowers/` design spec and implementation plan
