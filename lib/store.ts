@@ -1,4 +1,5 @@
-import { newId, type ExtractedEvent, type Term } from './extract'
+import { extractEvents, newId, type ExtractedEvent, type Term } from './extract'
+import { mergeEvents } from './merge'
 
 export type Course = {
   id: string
@@ -16,6 +17,9 @@ export type Action =
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; patch: Partial<Pick<Course, 'name' | 'term' | 'text'>> }
   | { type: 'setEvents'; id: string; events: ExtractedEvent[] }
+  | { type: 'mergeEvents'; id: string; events: ExtractedEvent[] }
+  | { type: 'extractAll' }
+  | { type: 'addFromFiles'; files: { name: string; text: string }[] }
   | { type: 'updateEvent'; courseId: string; eventId: string; patch: Partial<ExtractedEvent> }
   | { type: 'addEvent'; courseId: string }
   | { type: 'deleteEvent'; courseId: string; eventId: string }
@@ -56,6 +60,31 @@ export function reducer(state: State, action: Action): State {
       return mapCourse(state, action.id, (c) => ({ ...c, ...action.patch }))
     case 'setEvents':
       return mapCourse(state, action.id, (c) => ({ ...c, events: action.events, extracted: true }))
+    case 'mergeEvents':
+      return mapCourse(state, action.id, (c) => ({
+        ...c,
+        events: mergeEvents(c.events, action.events),
+        extracted: true,
+      }))
+    case 'extractAll':
+      return {
+        courses: state.courses.map((c) =>
+          c.text.trim() ? { ...c, events: mergeEvents(c.events, extractEvents(c.text, c.term)), extracted: true } : c,
+        ),
+      }
+    case 'addFromFiles': {
+      const courses = [...state.courses]
+      let first = true
+      for (const f of action.files) {
+        const blank = first && courses.length > 0 && !courses[courses.length - 1].name.trim() && !courses[courses.length - 1].text.trim()
+        first = false
+        const base = blank ? courses.pop()! : newCourse()
+        const name = base.name.trim() || f.name
+        const events = mergeEvents(base.events, extractEvents(f.text, base.term))
+        courses.push({ ...base, name, text: f.text, events, extracted: true })
+      }
+      return { courses }
+    }
     case 'updateEvent':
       return mapCourse(state, action.courseId, (c) => ({
         ...c,

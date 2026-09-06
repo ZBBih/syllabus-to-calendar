@@ -6,6 +6,9 @@ export type CalendarEvent = {
   confidence: 'high' | 'low'
   reason?: string
   include?: boolean
+  /** What extraction originally produced, so re-runs can match rows the user has edited. */
+  origDate?: string
+  origTitle?: string
 }
 
 export type CourseEvents = { name: string; events: CalendarEvent[] }
