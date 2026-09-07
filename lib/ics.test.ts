@@ -19,6 +19,12 @@ describe('buildIcs', () => {
     expect(out).toContain('DTEND:20260914T150000')
   })
 
+  it('keeps a late-night deadline on its own day', () => {
+    const out = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '23:59', title: 'Essay' }] }])
+    expect(out).toContain('DTSTART:20260914T235900')
+    expect(out).toContain('DTEND:20260914T235959')
+  })
+
   it('escapes and folds and uses CRLF', () => {
     const long = 'A'.repeat(120)
     const out = buildIcs([{ name: 'ECON 101', events: [{ ...base, date: '2026-09-14', title: `Midterm, part 1; ${long}` }] }])

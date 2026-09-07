@@ -13,7 +13,15 @@ const DAY_TOKENS: [RegExp, Weekday][] = [
 const LETTER_CODES: Record<string, Weekday> = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' }
 const COMPACT = /\b(?:M|T|W|R|F|Th|Tu){2,5}\b/g
 const TIME_RANGE = /(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?/i
-const LOCATION = /\b(?:[Ii]n|[Rr]oom|[Rr]m\.?|[Hh]all|[Bb]uilding|[Bb]ldg\.?)\s+([A-Z0-9][\w.-]*(?:\s+[A-Z0-9][\w.-]*){0,3})/
+// A place word keeps its own name: "Room 12" and "Science Hall 118" are directions a student
+// can follow, while the bare "12" or "118" they used to become is not.
+const LOCATION_PLACE = /\b((?:[A-Z][\w.-]*\s+){0,2}(?:[Rr]oom|[Rr]m\.?|[Hh]all|[Bb]uilding|[Bb]ldg\.?)\s+[A-Z0-9][\w.-]*)/
+// "in Olin 204" points at the room without naming a place word, so the preposition is dropped.
+const LOCATION_IN = /\b[Ii]n\s+([A-Z0-9][\w.-]*(?:\s+[A-Z0-9][\w.-]*){0,3})/
+
+function locationIn(s: string) {
+  return LOCATION_PLACE.exec(s) ?? LOCATION_IN.exec(s)
+}
 const WEEKDAY_INDEX: Record<Weekday, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 }
 
 function to24(raw: string, mer: string | undefined, fallbackPm: boolean): string {
@@ -58,7 +66,7 @@ export function detectMeeting(text: string, term: Term): Meeting | null {
     const start = to24(time[1], time[2] ?? (time[4] && Number(time[1]) <= Number(time[3]) ? time[4] : undefined), pmish)
     const end = to24(time[3], time[4], pmish)
     if (start >= end) continue
-    const loc = LOCATION.exec(line.slice(time.index + time[0].length)) ?? LOCATION.exec(line)
+    const loc = locationIn(line.slice(time.index + time[0].length)) ?? locationIn(line)
     const ref = termReferenceDate(term)
     const first = new Date(ref)
     while (!days.some((d) => WEEKDAY_INDEX[d] === first.getUTCDay())) first.setUTCDate(first.getUTCDate() + 1)

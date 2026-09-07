@@ -52,13 +52,24 @@ describe('ExportStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /name it in upload/i }))
     expect(dispatch).toHaveBeenCalledWith({ type: 'setStep', step: 1 })
   })
+  it('names the weekly class time separately so the count matches the review table', () => {
+    const withMeeting: State = {
+      ...base,
+      courses: [
+        { ...base.courses[0], meeting: { days: ['MO'], start: '10:00', end: '10:50', firstDate: '2026-08-31', untilDate: '2026-12-04' } },
+        base.courses[1],
+      ],
+    }
+    render(<ExportStep state={withMeeting} dispatch={() => {}} />)
+    expect(screen.getByText(/2 deadlines plus your weekly class time across 1 class,/i)).toBeTruthy()
+  })
   it('shows a clash callout when two things share a day', () => {
     render(<ExportStep state={base} dispatch={() => {}} />)
     expect(screen.getByText(/one day/i)).toBeTruthy()
   })
   it('counts only named classes in the summary and enables the main call to action', () => {
     render(<ExportStep state={base} dispatch={() => {}} />)
-    expect(screen.getByText(/2 events across 1 class,/i)).toBeTruthy()
+    expect(screen.getByText(/2 deadlines across 1 class,/i)).toBeTruthy()
     expect((screen.getByRole('button', { name: /add to my calendar/i }) as HTMLButtonElement).disabled).toBe(false)
   })
   it('downloads one class from the menu using a slug file name', () => {

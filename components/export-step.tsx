@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore, type Dispatch } from 'react'
 import { REMINDERS, type Reminder } from '@/lib/ics'
 import type { Action, State } from '@/lib/store'
-import { exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
+import { exportable, exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
 import { previewRows } from './date-preview'
 import { Confetti } from './confetti'
 import { ArtCrop } from './hero-art'
@@ -69,6 +69,11 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const courses = exportableCourses(state.courses)
   const plan = planForAll(courses, state)
   const included = plan.entries.length
+  // The file also carries one repeating entry per class that has a weekly meeting time, and
+  // those are not rows on the review table. Counting them as "deadlines" would contradict the
+  // number the student just read there, so they are named separately.
+  const meetings = courses.filter((c) => exportable(c).meeting).length
+  const deadlines = included - meetings
   const ready = included > 0
   const unnamed = unnamedWithEvents(state.courses)
   const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
@@ -115,7 +120,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
       </h1>
       <p className="lede mt-2">
         {ready
-          ? `${included} event${included === 1 ? '' : 's'} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, ready to go.`
+          ? `${deadlines} deadline${deadlines === 1 ? '' : 's'}${meetings > 0 ? ' plus your weekly class time' : ''} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, ready to go.`
           : 'Go back and add a syllabus first.'}
       </p>
 
@@ -163,10 +168,11 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
           ) : (
             <>
               <p className="font-display text-3xl sm:text-4xl">
-                <span className="tabular-nums text-accent">{included}</span> deadline{included === 1 ? '' : 's'}, one tap away
+                <span className="tabular-nums text-accent">{deadlines}</span> deadline{deadlines === 1 ? '' : 's'}, one tap away
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted">
                 Grab the file, open it, and every date above lands in your calendar with a reminder attached.
+                {meetings > 0 && ' Your weekly class time comes along too.'}
               </p>
               <div className="mt-6 flex flex-col items-center gap-2.5">
                 <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">

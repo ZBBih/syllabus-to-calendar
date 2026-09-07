@@ -4,6 +4,15 @@ const NOISE =
 const YEAR = /\b(19|20)\d{2}(-(19|20)?\d{2})?\b/g
 const COPY = /\(\d+\)/g
 
+// A department code is written in capitals everywhere else a student sees it, so a file called
+// biol-210-syllabus.docx should not seed a class called "biol 210".
+const COURSE_CODE = /^([A-Za-z]{2,6})\s?(\d{2,4}[A-Za-z]?)$/
+
+function tidyCode(s: string): string {
+  const m = COURSE_CODE.exec(s)
+  return m ? `${m[1].toUpperCase()} ${m[2].toUpperCase()}` : s
+}
+
 /** Best-effort class name from a syllabus file name. Returns '' when nothing useful remains. */
 export function nameFromFileName(fileName: string): string {
   let s = fileName.replace(/\.[a-z0-9]+$/i, '')
@@ -12,5 +21,5 @@ export function nameFromFileName(fileName: string): string {
   s = s.replace(SEASON_YEAR, ' ')
   s = s.replace(NOISE, ' ')
   s = s.replace(YEAR, ' ')
-  return s.replace(/\s+/g, ' ').trim()
+  return tidyCode(s.replace(/\s+/g, ' ').trim())
 }

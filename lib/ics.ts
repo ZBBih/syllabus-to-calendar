@@ -96,14 +96,21 @@ function nextDay(date: string) {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * An hour after the start, but never past midnight.
+ *
+ * Syllabi are full of things due at 11:59pm, and an hour-long block from there would spill
+ * into the next day, which is where a calendar then draws it. Clamping to the end of the day
+ * keeps a deadline on the day it belongs to.
+ */
 function plusHour(date: string, time: string) {
   const [h, m] = time.split(':').map(Number)
   const d = new Date(Date.UTC(2000, 0, 1, h, m))
   d.setUTCHours(d.getUTCHours() + 1)
-  const dayRoll = d.getUTCDate() !== 1
+  if (d.getUTCDate() !== 1) return { date, time: '235959' }
   const hh = String(d.getUTCHours()).padStart(2, '0')
   const mm = String(d.getUTCMinutes()).padStart(2, '0')
-  return { date: dayRoll ? nextDay(date) : date, time: `${hh}${mm}00` }
+  return { date, time: `${hh}${mm}00` }
 }
 
 function stamp() {
