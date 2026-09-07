@@ -15,16 +15,27 @@ import { initialState, load, reducer, save, type Step } from '@/lib/store'
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState)
   const hydrated = useRef(false)
+  // Restoring saved work lands on the render after this effect, so the save
+  // effect below has to sit out that one run or it writes the empty starting
+  // state over everything the browser had kept.
+  const skipSave = useRef(false)
   const [storageBlocked, setStorageBlocked] = useState(false)
 
   useEffect(() => {
     const saved = load()
-    if (saved) dispatch({ type: 'hydrate', state: saved })
+    if (saved) {
+      skipSave.current = true
+      dispatch({ type: 'hydrate', state: saved })
+    }
     hydrated.current = true
   }, [])
 
   useEffect(() => {
     if (!hydrated.current) return
+    if (skipSave.current) {
+      skipSave.current = false
+      return
+    }
     setStorageBlocked(!save(state))
   }, [state])
 
@@ -48,7 +59,7 @@ export default function Home() {
         {/* The mark always goes home, whatever step you are on. */}
         <button type="button" onClick={() => dispatch({ type: 'setStep', step: 0 })} className="flex items-center gap-2.5" aria-label="Syllabify home">
           <Logo size={32} />
-          <span className="font-display text-2xl">Syllabify</span>
+          <span className={`font-display text-2xl ${onLanding ? '' : 'max-[400px]:hidden'}`}>Syllabify</span>
         </button>
         <div className="flex items-center gap-2 sm:gap-3">
           {!onLanding && <Stepper current={state.step} done={done} onGo={(s) => dispatch({ type: 'setStep', step: s })} />}
