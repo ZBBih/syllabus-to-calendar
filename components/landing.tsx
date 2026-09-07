@@ -142,9 +142,9 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
-                <th className="px-5 py-3 font-semibold" />
-                <th className="px-5 py-3 font-semibold">The other apps</th>
-                <th className="px-5 py-3 font-semibold text-accent">
+                <th className="px-2 py-3 min-[400px]:px-4 sm:px-5 font-semibold" />
+                <th className="px-2 py-3 min-[400px]:px-4 sm:px-5 font-semibold">The other apps</th>
+                <th className="px-2 py-3 min-[400px]:px-4 sm:px-5 font-semibold text-accent">
                   Syllabify
                 </th>
               </tr>
@@ -155,16 +155,16 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
                   key={row.label}
                   className="border-b border-line last:border-0"
                 >
-                  <th scope="row" className="px-5 py-3 text-left font-medium">
+                  <th scope="row" className="px-2 py-3 min-[400px]:px-4 sm:px-5 text-left font-medium">
                     {row.label}
                   </th>
-                  <td className="px-5 py-3 text-muted">
+                  <td className="px-2 py-3 min-[400px]:px-4 sm:px-5 text-muted">
                     <span className="flex items-center gap-2">
                       <X size={14} className="shrink-0 text-danger" />
                       {row.them}
                     </span>
                   </td>
-                  <td className="px-5 py-3 font-medium">
+                  <td className="px-2 py-3 min-[400px]:px-4 sm:px-5 font-medium">
                     <span className="flex items-center gap-2">
                       <Check size={14} className="shrink-0 text-accent" />
                       {row.us}
