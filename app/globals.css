@@ -639,6 +639,24 @@ body {
     }
   }
 
+  /*
+   * Safari on iPhone zooms the whole page in when a field smaller than 16px takes focus, and
+   * then leaves the student scrolled sideways in a layout that was fitting a moment earlier.
+   * Every field on a phone is therefore at least 16px, and the tap targets that sit beside
+   * them grow to match rather than staying a mouse-sized 32px.
+   */
+  @media (max-width: 639px) {
+    .field,
+    select.field,
+    textarea.field {
+      font-size: 1rem;
+    }
+    .icon-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+  }
+
   /* The read report: the syllabus shown back, one line per row, so a student can scan for what
      is missing rather than take the app's word for it. */
   .read-lines {
@@ -694,10 +712,14 @@ body {
     }
     .review-table tr {
       display: grid;
-      grid-template-columns: auto minmax(0, 1.06fr) minmax(0, 1fr) auto;
+      /* A date and a time control at 16px cannot share a phone's width without one of them
+         clipping its own text, and 16px is not negotiable: below it Safari zooms the page on
+         focus. So each gets a row of its own, which is easier to hit anyway. */
+      grid-template-columns: auto minmax(0, 1fr) auto;
       grid-template-areas:
-        "check title title delete"
-        "check date time delete";
+        "check title delete"
+        "check date delete"
+        "check time delete";
       gap: 0.35rem 0.5rem;
       align-items: start;
       padding: 0.6rem 0.5rem;
@@ -735,22 +757,8 @@ body {
     .review-table .cell-time .field {
       width: 100%;
       min-width: 0;
-      /* The native date and time controls clip their own text before they
-         shrink, so buy them room by trimming the padding on phones. */
-      padding-left: 0.45rem;
-      padding-right: 0.35rem;
-      font-size: 0.8125rem;
-    }
-  }
-  /* Below about 360px a date and a time control cannot sit side by side
-     without one of them clipping its own text, so give each its own row. */
-  @media (max-width: 359px) {
-    .review-table tr {
-      grid-template-columns: auto minmax(0, 1fr) auto;
-      grid-template-areas:
-        "check title delete"
-        "check date delete"
-        "check time delete";
+      padding-left: 0.6rem;
+      padding-right: 0.5rem;
     }
   }
   @media (min-width: 640px) {

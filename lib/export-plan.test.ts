@@ -115,6 +115,33 @@ describe('mergeHistory', () => {
 })
 
 describe('planForAll: taking it all back off', () => {
+  it('cancels the rows on screen even when this browser has no export history', () => {
+    // The import was made from a phone, or the site data holding the history was cleared. A
+    // calendar identity is a content hash, so the same rows still name the same events.
+    const c = course('ECON 101', [ev({ id: 'a' }), ev({ id: 'b', date: '2026-10-01', title: 'Essay' })])
+    const untouched = { ...c, events: c.events.map((e) => ({ ...e, include: false })) }
+    const plan = planForAll([], state({ courses: [untouched] }))
+    expect(plan.entries).toEqual([])
+    expect(plan.cancelled).toBe(2)
+    expect(plan.ics).toContain(`UID:${eventUid('ECON 101', c.events[0])}`)
+    expect(plan.ics.match(/STATUS:CANCELLED/g)).toHaveLength(2)
+  })
+
+  it('does not offer a retraction for a class with no name to hash', () => {
+    const c = course('', [ev({ id: 'a', include: false })])
+    expect(planForAll([], state({ courses: [c] })).cancelled).toBe(0)
+  })
+
+  it('counts a row once when it is both in the history and on screen', () => {
+    const c = course('ECON 101', [ev({ id: 'a', include: false })])
+    const uid = eventUid('ECON 101', c.events[0])
+    const plan = planForAll(
+      [],
+      state({ courses: [c], lastExport: [{ uid, date: '2026-09-14', summary: 'ECON 101: Midterm' }] }),
+    )
+    expect(plan.cancelled).toBe(1)
+  })
+
   it('builds a file of nothing but cancellations when no row is ticked', () => {
     const plan = planForAll(
       [],

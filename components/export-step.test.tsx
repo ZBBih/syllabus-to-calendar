@@ -4,6 +4,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ExportStep, defaultTab } from './export-step'
 import type { State } from '@/lib/store'
 import { SITE_URL } from '@/lib/site'
+import { eventUid } from '@/lib/uid'
 
 afterEach(cleanup)
 
@@ -106,11 +107,13 @@ describe('ExportStep', () => {
   it('offers to take everything back off when nothing is ticked but a past export exists', () => {
     Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true, writable: true })
+    // The history names the same two events the rows do, so the retraction counts them once.
+    const [quiz, essay] = base.courses[0].events
     const none: State = {
       ...base,
       lastExport: [
-        { uid: 'u1@syllabify.app', date: '2026-09-14', summary: 'ECON 101: Quiz' },
-        { uid: 'u2@syllabify.app', date: '2026-09-14', summary: 'ECON 101: Essay' },
+        { uid: eventUid('ECON 101', quiz), date: quiz.date, summary: 'ECON 101: Quiz' },
+        { uid: eventUid('ECON 101', essay), date: essay.date, summary: 'ECON 101: Essay' },
       ],
       courses: base.courses.map((c) => ({ ...c, events: c.events.map((e) => ({ ...e, include: false })) })),
     }

@@ -15,6 +15,22 @@ export function exportable(c: Course) {
   return { name: c.name.trim(), events: exportableEvents(c), meeting: c.meetingIncluded === false ? null : c.meeting ?? null }
 }
 
+/**
+ * Every row a class could have put on a calendar, ticked or not.
+ *
+ * A calendar identity is a hash of the class name and what extraction first found, not a
+ * random per-run id, so this browser can name an event a different browser exported. That is
+ * what lets a student take a term off their calendar from a laptop after importing from a
+ * phone, or after clearing the site data that held the export history.
+ */
+export function retractable(c: Course) {
+  return {
+    name: c.name.trim(),
+    events: c.events.filter(isComplete).map((e) => ({ ...e, include: true })),
+    meeting: c.meeting ?? null,
+  }
+}
+
 /** Courses that have exportable rows but no name; they would otherwise vanish from the file. */
 export function unnamedWithEvents(courses: Course[]) {
   return courses.filter((c) => !c.name.trim() && exportableEvents(c).length > 0)
@@ -36,6 +52,13 @@ export function withdrawn(previous: ExportedEntry[], current: ExportedEntry[]): 
   return previous.filter((e) => !keep.has(e.uid))
 }
 
+/** One entry per calendar identity, keeping the first seen. */
+function byUid(entries: ExportedEntry[]): ExportedEntry[] {
+  const seen = new Map<string, ExportedEntry>()
+  for (const e of entries) if (!seen.has(e.uid)) seen.set(e.uid, e)
+  return [...seen.values()]
+}
+
 export type ExportPlan = {
   ics: string
   /** Everything this file puts on the calendar, to be recorded once it is saved. */
@@ -53,7 +76,11 @@ function plan(courses: Course[], state: State, subset?: ExportedEntry[]): Export
   const entries = exportedEntries(shaped)
   const previous = new Set(state.lastExport.map((e) => e.uid))
   // A per-class file must not withdraw the other classes, so cancellations only apply to a full export.
-  const cancelled = subset ? [] : withdrawn(state.lastExport, entries)
+  // With nothing ticked the student is asking for the whole thing back, which includes rows this
+  // browser never exported itself: the calendar knows them by the same content-hashed id.
+  const retraction =
+    !subset && entries.length === 0 ? exportedEntries(state.courses.filter((c) => c.name.trim()).map(retractable)) : []
+  const cancelled = subset ? [] : byUid([...withdrawn(state.lastExport, entries), ...retraction])
   return {
     ics: buildIcs(shaped, state.reminder, { sequence: state.exportSequence, cancelled }),
     entries,

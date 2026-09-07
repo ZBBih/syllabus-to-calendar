@@ -85,9 +85,10 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
    * Unticking everything is how a student says "take it all back off", and the file that does
    * it is the one this screen already builds: a plan with no events is a plan made entirely of
    * cancellations. Refusing to export it was the one case where the app could put events on a
-   * calendar and not take them off again.
+   * calendar and not take them off again. Because a calendar identity is a content hash, this
+   * works even for an import made from another browser, where no history is stored here.
    */
-  const withdrawing = !ready && state.lastExport.length > 0
+  const withdrawing = !ready && plan.cancelled > 0
   const canAct = ready || withdrawing
   const unnamed = unnamedWithEvents(state.courses)
   const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
