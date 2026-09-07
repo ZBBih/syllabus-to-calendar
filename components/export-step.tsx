@@ -18,10 +18,12 @@ const GUIDES = {
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone: tap "Add to my calendar" above, choose Calendar in the share sheet, then tap Add All.',
+    'On iPhone: tap "Add to my calendar" above, then "Save to Files". Open the Files app, tap syllabify.ics, and tap Add All.',
+    'Calendar is not one of the apps in the share sheet, so save the file first rather than looking for it there.',
+    'If the file opens in a note-taking or PDF app instead, that app has claimed .ics files. Press and hold it in Files, choose Share, and pick Calendar — or import it on a Mac, where it always works.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
-    'iCloud syncs it to every Apple device.',
+    'iCloud syncs it to every Apple device, so importing once on a Mac puts it on your phone too.',
   ],
   Outlook: [
     'Outlook on the web: open the calendar, click "Add calendar", then "Upload from file".',
@@ -104,7 +106,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
     const file = new File([plan.ics], 'syllabify.ics', { type: 'text/calendar' })
     try {
       await navigator.share({ files: [file], title: 'My class deadlines' })
-      succeed('Pick your Calendar app in the share sheet and tap Add All.')
+      succeed('Choose "Save to Files", then open the file from Files and tap Add All. Calendar is not in the share sheet itself.')
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       downloadAll()
@@ -179,7 +181,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                   <Upload size={18} /> Add to my calendar
                 </button>
                 <p className="max-w-sm text-xs leading-relaxed text-muted">
-                  {canShare ? 'Opens your share sheet. Pick Calendar and tap Add All.' : 'Saves one file. Opening it imports every date at once.'}
+                  {canShare ? 'Opens your share sheet. Save it to Files, then open it to add every date.' : 'Saves one file. Opening it imports every date at once.'}
                 </p>
               </div>
             </>
