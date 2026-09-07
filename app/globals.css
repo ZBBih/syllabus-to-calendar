@@ -639,6 +639,52 @@ body {
     }
   }
 
+  /* The read report: the syllabus shown back, one line per row, so a student can scan for what
+     is missing rather than take the app's word for it. */
+  .read-lines {
+    max-height: 55vh;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 0.625rem;
+    background: var(--elev);
+    padding: 0.35rem;
+  }
+  .read-line {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding: 0.35rem 0.4rem;
+    border-radius: 0.375rem;
+  }
+  .read-line + .read-line {
+    border-top: 1px solid var(--line);
+  }
+  .read-line-hit {
+    background: color-mix(in oklab, var(--accent) 8%, transparent);
+  }
+  .read-mark {
+    display: flex;
+    height: 1.05rem;
+    width: 1.05rem;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.1rem;
+    border-radius: 999px;
+    color: var(--accent-ink);
+    background: transparent;
+  }
+  .read-line-hit .read-mark {
+    background: var(--accent);
+  }
+  .read-text {
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   /* Review table: one stacked card per row on phones, a real table above that. */
   @media (max-width: 639px) {
     .review-table table,
@@ -648,7 +694,7 @@ body {
     }
     .review-table tr {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+      grid-template-columns: auto minmax(0, 1.06fr) minmax(0, 1fr) auto;
       grid-template-areas:
         "check title title delete"
         "check date time delete";
@@ -689,6 +735,22 @@ body {
     .review-table .cell-time .field {
       width: 100%;
       min-width: 0;
+      /* The native date and time controls clip their own text before they
+         shrink, so buy them room by trimming the padding on phones. */
+      padding-left: 0.45rem;
+      padding-right: 0.35rem;
+      font-size: 0.8125rem;
+    }
+  }
+  /* Below about 360px a date and a time control cannot sit side by side
+     without one of them clipping its own text, so give each its own row. */
+  @media (max-width: 359px) {
+    .review-table tr {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas:
+        "check title delete"
+        "check date delete"
+        "check time delete";
     }
   }
   @media (min-width: 640px) {

@@ -7,6 +7,7 @@ import { diffCount } from '@/lib/merge'
 import { ReviewTable } from './review-table'
 import { DatePreview } from './date-preview'
 import { PasteSheet } from './paste-sheet'
+import { ReadReport } from './read-report'
 import { ChangeSummary } from './change-summary'
 import { GradePanel } from './grade-panel'
 import { ArrowLeft, ArrowRight, Camera, Chevron, Plus } from './icons'
@@ -16,6 +17,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
   const active = courses.find((c) => c.id === state.activeCourseId) ?? courses[0]
   const [needsCheck, setNeedsCheck] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
+  const [reading, setReading] = useState<Course | null>(null)
   const [showAll, setShowAll] = useState(false)
 
   if (!active) {
@@ -120,6 +122,11 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
           <button type="button" onClick={() => setEditing(active)} className="btn btn-secondary btn-sm">
             Edit text
           </button>
+          {active.text.trim() !== '' && (
+            <button type="button" onClick={() => setReading(active)} className="btn btn-secondary btn-sm">
+              What we read
+            </button>
+          )}
         </div>
         <ReviewTable course={active} rows={rows} dispatch={dispatch} />
       </div>
@@ -139,7 +146,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
         </div>
       )}
 
-      <div className="mt-8 flex items-center justify-between gap-3">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => dispatch({ type: 'setStep', step: 1 })} className="btn btn-secondary">
           <ArrowLeft size={15} /> Back
         </button>
@@ -149,6 +156,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
       </div>
 
       {editing && <PasteSheet course={editing} dispatch={dispatch} onClose={() => setEditing(null)} />}
+      {reading && <ReadReport course={reading} dispatch={dispatch} onClose={() => setReading(null)} />}
     </div>
   )
 }
