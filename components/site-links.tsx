@@ -19,7 +19,7 @@ export const SOCIALS = [
  * 'https://buymeacoffee.com/yourhandle' or a Ko-fi or PayPal.me address.
  * While it is empty nothing renders, so the page never shows a dead link.
  */
-export const SUPPORT_URL = ''
+export const SUPPORT_URL = 'https://ko-fi.com/zachdweiss'
 
 export function SocialLinks({ size = 16, className = '' }: { size?: number; className?: string }) {
   return (
