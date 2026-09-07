@@ -8,7 +8,6 @@ import { FileDrop } from './file-drop'
 import { ClassRow } from './class-row'
 import { PasteSheet } from './paste-sheet'
 import { ArrowLeft, ArrowRight } from './icons'
-import { ArtCrop } from './hero-art'
 
 /** Every class that has dates must be named, and at least one such class must exist. */
 export function canProceed(courses: Course[]) {
@@ -35,13 +34,8 @@ export function UploadStep({ state, dispatch }: { state: State; dispatch: Dispat
           <button type="button" onClick={() => dispatch({ type: 'setStep', step: 0 })} className="btn btn-ghost btn-sm -ml-2 mb-3">
             <ArrowLeft size={14} /> Back
           </button>
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="h1">Drop your syllabi</h1>
-              <p className="lede mt-2">Each file becomes a class. Every date, meeting and grading table gets pulled out while you watch.</p>
-            </div>
-            <ArtCrop part="document" size={112} className="crop-in hidden sm:block" />
-          </div>
+          <h1 className="h1">Drop your syllabi</h1>
+          <p className="lede mt-2">Each file becomes a class. Every date, meeting and grading table gets pulled out while you watch.</p>
         </>
       ) : (
         <>

@@ -282,13 +282,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
         <button type="button" onClick={() => dispatch({ type: 'setStep', step: 2 })} className="btn btn-secondary">
           <ArrowLeft size={15} /> Back
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm('Clear all classes and dates and start over?')) dispatch({ type: 'clear' })
-          }}
-          className="btn btn-ghost"
-        >
+        <button type="button" onClick={() => dispatch({ type: 'clear' })} className="btn btn-ghost">
           Start over
         </button>
       </div>

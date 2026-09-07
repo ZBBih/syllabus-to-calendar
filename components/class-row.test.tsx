@@ -25,28 +25,19 @@ describe('ClassRow', () => {
     rerender(<ClassRow course={course({ name: '' })} index={0} dispatch={dispatch} onEditText={() => {}} />)
     expect(screen.queryByRole('button', { name: /clear name/i })).toBeNull()
   })
-  it('always offers a bin, and asks before dropping a class that has dates', () => {
-    const dispatch = vi.fn()
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    render(<ClassRow course={course({})} index={0} dispatch={dispatch} onEditText={() => {}} />)
-    const bin = screen.getByRole('button', { name: /remove/i })
-
-    fireEvent.click(bin)
-    expect(confirmSpy).toHaveBeenCalled()
-    expect(dispatch).not.toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
-
-    confirmSpy.mockReturnValue(true)
-    fireEvent.click(bin)
-    expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
-    confirmSpy.mockRestore()
-  })
-  it('drops an empty class without asking, since there is nothing to lose', () => {
+  it('drops a class on the first click, with dates or without, and never asks', () => {
     const dispatch = vi.fn()
     const confirmSpy = vi.spyOn(window, 'confirm')
-    render(<ClassRow course={{ ...course({}), events: [] }} index={0} dispatch={dispatch} onEditText={() => {}} />)
+    const { rerender } = render(<ClassRow course={course({})} index={0} dispatch={dispatch} onEditText={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /remove/i }))
-    expect(confirmSpy).not.toHaveBeenCalled()
     expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
+
+    dispatch.mockClear()
+    rerender(<ClassRow course={{ ...course({}), events: [] }} index={0} dispatch={dispatch} onEditText={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /remove/i }))
+    expect(dispatch).toHaveBeenCalledWith({ type: 'remove', id: 'c1' })
+
+    expect(confirmSpy).not.toHaveBeenCalled()
     confirmSpy.mockRestore()
   })
   it('shows the date count pill', () => {

@@ -101,12 +101,7 @@ export function ClassRow({
         </select>
         <button
           type="button"
-          onClick={() => {
-            const named = course.name.trim()
-            const dates = course.events.length
-            const warn = dates > 0 ? `Remove ${named || 'this class'} and its ${dates} date${dates === 1 ? '' : 's'}?` : null
-            if (!warn || confirm(warn)) dispatch({ type: 'remove', id: course.id })
-          }}
+          onClick={() => dispatch({ type: 'remove', id: course.id })}
           className="icon-btn"
           aria-label={`Remove ${course.name.trim() || 'class'}`}
           title="Remove this class"
