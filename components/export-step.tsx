@@ -79,6 +79,16 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const meetings = courses.filter((c) => exportable(c).meeting).length
   const deadlines = included - meetings
   const ready = included > 0
+  /**
+   * Nothing ticked, but an earlier export put events on the calendar.
+   *
+   * Unticking everything is how a student says "take it all back off", and the file that does
+   * it is the one this screen already builds: a plan with no events is a plan made entirely of
+   * cancellations. Refusing to export it was the one case where the app could put events on a
+   * calendar and not take them off again.
+   */
+  const withdrawing = !ready && state.lastExport.length > 0
+  const canAct = ready || withdrawing
   const unnamed = unnamedWithEvents(state.courses)
   const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
   const repeat = state.exportSequence > 0
@@ -91,7 +101,11 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
 
   function downloadAll() {
     saveFile(plan.ics, 'syllabify.ics')
-    succeed('syllabify.ics is in your Downloads. One more step and your semester is on your calendar:')
+    succeed(
+      withdrawing
+        ? 'syllabify.ics is in your Downloads. Open it the same way you imported, and your calendar drops those events.'
+        : 'syllabify.ics is in your Downloads. One more step and your semester is on your calendar:',
+    )
   }
 
   /**
@@ -107,8 +121,12 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
     }
     const file = new File([plan.ics], 'syllabify.ics', { type: 'text/calendar' })
     try {
-      await navigator.share({ files: [file], title: 'My class deadlines' })
-      succeed('Choose "Save to Files", then open the file from Files and tap Add All. Calendar is not in the share sheet itself.')
+      await navigator.share({ files: [file], title: withdrawing ? 'Class deadlines to remove' : 'My class deadlines' })
+      succeed(
+        withdrawing
+          ? 'Save it to Files and open it the same way you imported. Your calendar drops those events.'
+          : 'Choose "Save to Files", then open the file from Files and tap Add All. Calendar is not in the share sheet itself.',
+      )
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       downloadAll()
@@ -121,10 +139,12 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
    * everywhere else, and a plain instruction if the browser refuses both.
    */
   async function shareSite() {
-    const text = 'Syllabify put my whole semester on my calendar in about a minute. No account, free.'
+    // The sentence carries the link rather than sitting beside it: a share with both a text and
+    // a url loses the text in Messages on iOS, and a bare link says nothing about what it is.
+    const text = `Syllabify put my whole semester on my calendar in about a minute. No account, free. ${SITE_URL}`
     try {
       if (typeof navigator.share === 'function') {
-        await navigator.share({ title: 'Syllabify', text, url: SITE_URL })
+        await navigator.share({ title: 'Syllabify', text })
         return
       }
       await navigator.clipboard.writeText(SITE_URL)
@@ -140,12 +160,22 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
       <Confetti fireKey={celebrate} />
 
       <h1 className="h1">
-        {done ? 'That is your whole semester.' : ready ? 'One file. Your whole semester.' : 'Nothing to export yet.'}
+        {done
+          ? withdrawing
+            ? 'Off your calendar.'
+            : 'That is your whole semester.'
+          : ready
+            ? 'One file. Your whole semester.'
+            : withdrawing
+              ? 'Take it back off your calendar.'
+              : 'Nothing to export yet.'}
       </h1>
       <p className="lede mt-2">
         {ready
           ? `${deadlines} deadline${deadlines === 1 ? '' : 's'}${meetings > 0 ? ' plus your weekly class time' : ''} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, ready to go.`
-          : 'Go back and add a syllabus first.'}
+          : withdrawing
+            ? `Nothing is ticked, so this file withdraws the ${plan.cancelled} event${plan.cancelled === 1 ? '' : 's'} your last export put there.`
+            : 'Go back and add a syllabus first.'}
       </p>
 
       {unnamed.length > 0 && (
@@ -184,7 +214,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
               <p className="mt-4 font-display text-2xl">Done.</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-secondary">
+                <button type="button" onClick={addToCalendar} disabled={!canAct} className="btn btn-secondary">
                   Do that again
                 </button>
                 <button type="button" onClick={shareSite} className="btn btn-secondary">
@@ -200,15 +230,29 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
           ) : (
             <>
               <p className="font-display text-3xl sm:text-4xl">
-                <span className="tabular-nums text-accent">{deadlines}</span> deadline{deadlines === 1 ? '' : 's'}, one tap away
+                {withdrawing ? (
+                  <>
+                    <span className="tabular-nums text-accent">{plan.cancelled}</span> event{plan.cancelled === 1 ? '' : 's'} to take back
+                  </>
+                ) : (
+                  <>
+                    <span className="tabular-nums text-accent">{deadlines}</span> deadline{deadlines === 1 ? '' : 's'}, one tap away
+                  </>
+                )}
               </p>
               <p className="mx-auto mt-2 max-w-md text-sm text-muted">
-                Grab the file, open it, and every date above lands in your calendar with a reminder attached.
-                {meetings > 0 && ' Your weekly class time comes along too.'}
+                {withdrawing ? (
+                  'This file tells your calendar to drop what the last export put there. Tick a row again if you only meant to remove some of them.'
+                ) : (
+                  <>
+                    Grab the file, open it, and every date above lands in your calendar with a reminder attached.
+                    {meetings > 0 && ' Your weekly class time comes along too.'}
+                  </>
+                )}
               </p>
               <div className="mt-6 flex flex-col items-center gap-2.5">
-                <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-primary btn-hero w-full sm:w-auto">
-                  <Upload size={18} /> Add to my calendar
+                <button type="button" onClick={addToCalendar} disabled={!canAct} className="btn btn-primary btn-hero w-full sm:w-auto">
+                  <Upload size={18} /> {withdrawing ? 'Take them off my calendar' : 'Add to my calendar'}
                 </button>
                 <p className="max-w-sm text-xs leading-relaxed text-muted">
                   {canShare ? 'Opens your share sheet. Save it to Files, then open it to add every date.' : 'Saves one file. Opening it imports every date at once.'}

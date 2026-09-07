@@ -113,3 +113,22 @@ describe('mergeHistory', () => {
     expect(out).toEqual([{ uid: 'a', date: '2026-09-21', summary: 'New' }])
   })
 })
+
+describe('planForAll: taking it all back off', () => {
+  it('builds a file of nothing but cancellations when no row is ticked', () => {
+    const plan = planForAll(
+      [],
+      state({
+        lastExport: [
+          { uid: 'u1@syllabify.app', date: '2026-09-14', summary: 'ECON 101: Quiz' },
+          { uid: 'u2@syllabify.app', date: '2026-10-01', summary: 'ECON 101: Essay' },
+        ],
+      }),
+    )
+    expect(plan.entries).toEqual([])
+    expect(plan.cancelled).toBe(2)
+    expect(plan.ics.match(/STATUS:CANCELLED/g)).toHaveLength(2)
+    expect(plan.ics).toContain('UID:u1@syllabify.app')
+  })
+})
+

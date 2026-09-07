@@ -83,7 +83,11 @@ describe('ExportStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
     fireEvent.click(await screen.findByRole('button', { name: /send this to a friend/i }))
     await Promise.resolve()
-    expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://syllabus-to-calendar-ten.vercel.app' }))
+    // The link rides inside the text: iOS Messages keeps a url and throws the sentence away.
+    const [[arg]] = share.mock.calls
+    expect(arg.url).toBeUndefined()
+    expect(arg.text).toContain('https://syllabus-to-calendar-ten.vercel.app')
+    expect(arg.text).toContain('No account, free.')
   })
 
   it('copies the link and says so when there is no share sheet', async () => {
@@ -96,6 +100,36 @@ describe('ExportStep', () => {
     fireEvent.click(await screen.findByRole('button', { name: /send this to a friend/i }))
     expect(writeText).toHaveBeenCalledWith('https://syllabus-to-calendar-ten.vercel.app')
     expect(await screen.findByText(/link copied/i)).toBeTruthy()
+  })
+
+  it('offers to take everything back off when nothing is ticked but a past export exists', () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true, writable: true })
+    const none: State = {
+      ...base,
+      lastExport: [
+        { uid: 'u1@syllabify.app', date: '2026-09-14', summary: 'ECON 101: Quiz' },
+        { uid: 'u2@syllabify.app', date: '2026-09-14', summary: 'ECON 101: Essay' },
+      ],
+      courses: base.courses.map((c) => ({ ...c, events: c.events.map((e) => ({ ...e, include: false })) })),
+    }
+    const dispatch = vi.fn()
+    render(<ExportStep state={none} dispatch={dispatch} />)
+    expect(screen.getByText(/take it back off your calendar/i)).toBeTruthy()
+    expect(screen.getByText(/withdraws the 2 events/i)).toBeTruthy()
+
+    const button = screen.getByRole('button', { name: /take them off my calendar/i }) as HTMLButtonElement
+    expect(button.disabled).toBe(false)
+    fireEvent.click(button)
+    // The history is cleared by recording an export of nothing, so the offer does not come back.
+    expect(dispatch).toHaveBeenCalledWith({ type: 'recordExport', entries: [] })
+  })
+
+  it('still refuses to export when there is nothing to add and nothing to withdraw', () => {
+    const empty: State = { ...base, lastExport: [], courses: base.courses.map((c) => ({ ...c, events: [] })) }
+    render(<ExportStep state={empty} dispatch={() => {}} />)
+    expect(screen.getByText(/nothing to export yet/i)).toBeTruthy()
+    expect((screen.getByRole('button', { name: /add to my calendar/i }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('downloads one class from the menu using a slug file name', () => {
