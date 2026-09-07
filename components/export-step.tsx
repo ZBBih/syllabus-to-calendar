@@ -175,7 +175,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
         {ready
           ? `${deadlines} deadline${deadlines === 1 ? '' : 's'}${meetings > 0 ? ' plus your weekly class time' : ''} across ${courses.length} class${courses.length === 1 ? '' : 'es'}, ready to go.`
           : withdrawing
-            ? `Nothing is ticked, so this file withdraws the ${plan.cancelled} event${plan.cancelled === 1 ? '' : 's'} your last export put there.`
+            ? `Nothing is ticked, so this file takes back the ${plan.cancelled} event${plan.cancelled === 1 ? '' : 's'} these classes put on your calendar.`
             : 'Go back and add a syllabus first.'}
       </p>
 
@@ -256,7 +256,13 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                   <Upload size={18} /> {withdrawing ? 'Take them off my calendar' : 'Add to my calendar'}
                 </button>
                 <p className="max-w-sm text-xs leading-relaxed text-muted">
-                  {canShare ? 'Opens your share sheet. Save it to Files, then open it to add every date.' : 'Saves one file. Opening it imports every date at once.'}
+                  {withdrawing
+                    ? canShare
+                      ? 'Opens your share sheet. Save it to Files, then open it the same way you imported.'
+                      : 'Saves one file. Opening it clears those events from your calendar.'
+                    : canShare
+                      ? 'Opens your share sheet. Save it to Files, then open it to add every date.'
+                      : 'Saves one file. Opening it imports every date at once.'}
                 </p>
               </div>
             </>

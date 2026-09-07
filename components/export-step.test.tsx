@@ -120,7 +120,7 @@ describe('ExportStep', () => {
     const dispatch = vi.fn()
     render(<ExportStep state={none} dispatch={dispatch} />)
     expect(screen.getByText(/take it back off your calendar/i)).toBeTruthy()
-    expect(screen.getByText(/withdraws the 2 events/i)).toBeTruthy()
+    expect(screen.getByText(/takes back the 2 events/i)).toBeTruthy()
 
     const button = screen.getByRole('button', { name: /take them off my calendar/i }) as HTMLButtonElement
     expect(button.disabled).toBe(false)
