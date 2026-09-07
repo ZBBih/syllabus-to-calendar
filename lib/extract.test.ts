@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractEvents, termReferenceDate, type Term } from './extract'
+import { extractEvents, readReport, termReferenceDate, type Term } from './extract'
 
 const fall: Term = { season: 'Fall', year: 2026 }
 const spring: Term = { season: 'Spring', year: 2027 }
@@ -58,9 +58,86 @@ describe('extractEvents', () => {
     expect(out[1]).toMatchObject({ date: '2026-10-14', time: '10:00', title: 'Midterm exam, Room 204' })
   })
 
-  it('date range emits one event on the start date', () => {
+  it('date range is one event carrying its last day', () => {
     const [e, ...rest] = extractEvents('Sept 14-16: Field trip', fall)
-    expect(e.date).toBe('2026-09-14')
+    expect(e).toMatchObject({ date: '2026-09-14', endDate: '2026-09-16' })
     expect(rest).toEqual([])
   })
+
+  it('a single date carries no end date', () => {
+    const [e] = extractEvents('Sept 14: Field trip', fall)
+    expect(e.endDate).toBeUndefined()
+  })
+
+  it('every date on a line becomes its own row', () => {
+    const out = extractEvents('Sept 9 / Sept 11 \u2014 Reading response 1 due', fall)
+    expect(out.map((e) => e.date)).toEqual(['2026-09-09', '2026-09-11'])
+    expect(out.every((e) => e.title === 'Reading response 1 due')).toBe(true)
+  })
+
+  it('drops the joiner left behind between two dates', () => {
+    const out = extractEvents('Oct 5 and Oct 7: Group presentations', fall)
+    expect(out.map((e) => e.title)).toEqual(['Group presentations', 'Group presentations'])
+  })
+
+  it('a date repeated on one line still makes one row', () => {
+    const out = extractEvents('Oct 9 quiz, submit by Oct 9', fall)
+    expect(out).toHaveLength(1)
+  })
+
+  it('a second date outside the term window does not sink the first', () => {
+    const out = extractEvents('Sept 9 essay due, syllabus written Jan 3 2020', fall)
+    expect(out.map((e) => e.date)).toEqual(['2026-09-09'])
+  })
 })
+
+describe('readReport', () => {
+  it('keeps every line of the syllabus, in order', () => {
+    const out = readReport('Course schedule\nSept 14: Midterm\nOffice: Room 12', fall)
+    expect(out.map((l) => l.text)).toEqual(['Course schedule', 'Sept 14: Midterm', 'Office: Room 12'])
+  })
+
+  it('marks the line a date was taken from', () => {
+    const [, line] = readReport('Course schedule\nSept 14: Midterm 1', fall)
+    expect(line.captured).toEqual([{ date: '2026-09-14', endDate: undefined, time: undefined, title: 'Midterm 1' }])
+    expect(line.skipped).toEqual([])
+  })
+
+  it('reports a date it found but left out of the term, with the date it would have used', () => {
+    const [line] = readReport('May 4: Final exam', fall)
+    expect(line.captured).toEqual([])
+    expect(line.skipped).toEqual([{ text: 'May 4', date: '2027-05-04', reason: 'outside the term', title: 'Final exam' }])
+  })
+
+  it('reports a date too vague to use', () => {
+    const [line] = readReport('Essays are due in November', fall)
+    expect(line.captured).toEqual([])
+    expect(line.skipped[0].reason).toBe('no month and day')
+    expect(line.skipped[0].date).toBeUndefined()
+  })
+
+  it('does not report the time on a captured line as something lost', () => {
+    const [line] = readReport('Oct 12: Midterm exam at 2pm', fall)
+    expect(line.captured).toHaveLength(1)
+    expect(line.skipped).toEqual([])
+  })
+
+  it('says nothing was missed on a line that carries no date at all', () => {
+    const [year, phone] = readReport('Updated 2026\nCall 555-1234', fall)
+    expect(year.skipped).toEqual([])
+    expect(phone.skipped).toEqual([])
+  })
+
+  it('credits a date-only line with the row it produced', () => {
+    const out = readReport('Nov 3\nEssay due', fall)
+    expect(out[0].captured.map((c) => c.title)).toEqual(['Essay due'])
+    expect(out[1].captured).toEqual([])
+  })
+
+  it('agrees with what extraction actually produced', () => {
+    const text = 'Week 1  Sept 2  Welcome\nMay 4: Final exam\nOct 20-21 Fall break'
+    const captured = readReport(text, fall).flatMap((l) => l.captured.map((c) => c.date))
+    expect(captured).toEqual(extractEvents(text, fall).map((e) => e.date))
+  })
+})
+

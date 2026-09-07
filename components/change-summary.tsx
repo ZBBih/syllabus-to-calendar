@@ -15,7 +15,18 @@ import { Plus, Swap, Alert, X } from './icons'
  */
 
 const fmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
-const day = (iso: string) => (iso ? fmt.format(new Date(`${iso}T12:00:00`)) : 'no date')
+const fmtYear = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+const day = (iso: string, withYear = false) =>
+  iso ? (withYear ? fmtYear : fmt).format(new Date(`${iso}T12:00:00`)) : 'no date'
+
+/**
+ * A move within one term needs no year, but correcting the term moves every date by a year and
+ * nothing else, and "moved from Sep 2 to Sep 2" reads as a bug rather than as the fix it is.
+ */
+const movedLabel = (from: string, to: string) => {
+  const sameYear = from.slice(0, 4) === to.slice(0, 4)
+  return `moved from ${day(from, !sameYear)} to ${day(to, !sameYear)}`
+}
 
 export function ChangeSummary({ course, dispatch }: { course: Course; dispatch: Dispatch<Action> }) {
   const diff = course.diff
@@ -48,9 +59,7 @@ export function ChangeSummary({ course, dispatch }: { course: Course; dispatch: 
             </span>
             <span className="min-w-0">
               <span className="font-medium">{byId.get(m.id)!.title || 'Untitled'}</span>{' '}
-              <span className="text-muted">
-                moved from {day(m.from)} to {day(m.to)}
-              </span>
+              <span className="text-muted">{movedLabel(m.from, m.to)}</span>
             </span>
           </li>
         ))}

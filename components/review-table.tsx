@@ -6,6 +6,12 @@ import type { ExtractedEvent } from '@/lib/extract'
 import { isComplete } from '@/lib/export'
 import { Trash, X } from './icons'
 
+/** A range's last day, written the short way: the row already shows the year on the start date. */
+function dayLabel(iso: string) {
+  const [, m, d] = iso.split('-')
+  return `${Number(m)}/${Number(d)}`
+}
+
 export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?: ExtractedEvent[]; dispatch: Dispatch<Action> }) {
   const list = rows ?? course.events
   if (list.length === 0) return <p className="py-6 text-center text-sm text-muted">Nothing to show here.</p>
@@ -40,6 +46,16 @@ export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?:
                 </td>
                 <td className="cell-date px-2 py-1.5 align-top">
                   <input type="date" value={e.date} onChange={(ev) => update({ date: ev.target.value })} className="field py-1" aria-label="Date" />
+                  {e.endDate && (
+                    <button
+                      type="button"
+                      onClick={() => update({ endDate: undefined })}
+                      className="pill mt-1 hover:text-fg"
+                      aria-label={`This runs to ${e.endDate}. Make it one day.`}
+                    >
+                      to {dayLabel(e.endDate)} <X size={11} />
+                    </button>
+                  )}
                 </td>
                 <td className="cell-time px-2 py-1.5 align-top">
                   <input type="time" value={e.time ?? ''} onChange={(ev) => update({ time: ev.target.value || undefined })} className="field py-1" aria-label="Time" />

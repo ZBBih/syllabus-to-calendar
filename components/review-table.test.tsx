@@ -29,6 +29,24 @@ describe('ReviewTable', () => {
     })
   })
 
+  it('shows a range\'s last day and drops the range when it is dismissed', () => {
+    const dispatch = vi.fn()
+    const ranged: Course = {
+      ...course,
+      events: [{ id: 'e1', date: '2026-10-20', endDate: '2026-10-21', title: 'Fall break', confidence: 'high', include: true }],
+    }
+    render(<ReviewTable course={ranged} dispatch={dispatch} />)
+    const pill = screen.getByRole('button', { name: /runs to 2026-10-21/i })
+    expect(pill.textContent).toContain('to 10/21')
+    fireEvent.click(pill)
+    expect(dispatch).toHaveBeenCalledWith({ type: 'updateEvent', courseId: 'c1', eventId: 'e1', patch: { endDate: undefined } })
+  })
+
+  it('a single-day row shows no range pill', () => {
+    render(<ReviewTable course={course} dispatch={() => {}} />)
+    expect(screen.queryByRole('button', { name: /runs to/i })).toBeNull()
+  })
+
   it('unchecking include dispatches include false', () => {
     const dispatch = vi.fn()
     render(<ReviewTable course={course} dispatch={dispatch} />)

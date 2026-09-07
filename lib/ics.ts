@@ -3,6 +3,8 @@ import { eventUid, meetingUid } from './uid'
 export type CalendarEvent = {
   id: string
   date: string // YYYY-MM-DD
+  /** Last day of a multi-day event, e.g. a reading week. Undefined for a single day. */
+  endDate?: string // YYYY-MM-DD
   time?: string // HH:MM
   title: string
   confidence: 'high' | 'low'
@@ -15,6 +17,8 @@ export type CalendarEvent = {
   source?: string
   /** Set when a re-run of the syllabus no longer mentions this row. */
   missing?: boolean
+  /** The student put this row here themselves, so no re-read of the syllabus may retire it. */
+  manual?: boolean
 }
 
 /** A weekly class meeting, emitted as one recurring event. */
@@ -177,7 +181,8 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
         lines.push(`DTEND:${compact(end.date)}T${end.time}`)
       } else {
         lines.push(`DTSTART;VALUE=DATE:${compact(ev.date)}`)
-        lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.date))}`)
+        // An all-day DTEND is exclusive, so a range ends the day after its last day.
+        lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.endDate ?? ev.date))}`)
       }
       lines.push(`SUMMARY:${escapeIcs(summary)}`)
       if (ev.source && ev.source.trim() !== ev.title.trim()) lines.push(`DESCRIPTION:${escapeIcs(ev.source.trim())}`)

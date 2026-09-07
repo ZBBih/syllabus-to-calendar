@@ -3,6 +3,8 @@ import { mergeWithDiff, EMPTY_DIFF, type EventDiff } from './merge'
 import type { ExportedEntry, Meeting, Reminder } from './ics'
 import { detectMeeting } from './meeting'
 import { extractWeights, mergeWeights, blankWeight, type Weight } from './grades'
+import { looksLikeCode, nameFromText } from './course-name'
+import { termFromText } from './term'
 
 export type Course = {
   id: string
@@ -40,12 +42,13 @@ export type Action =
   | { type: 'add' }
   | { type: 'remove'; id: string }
   | { type: 'update'; id: string; patch: Partial<Pick<Course, 'name' | 'term' | 'text'>> }
+  | { type: 'setTerm'; id: string; term: Term }
   | { type: 'setEvents'; id: string; events: ExtractedEvent[] }
   | { type: 'mergeEvents'; id: string; events: ExtractedEvent[] }
   | { type: 'extractAll' }
   | { type: 'addFromFiles'; files: { name: string; text: string; viaPhoto?: boolean }[] }
   | { type: 'updateEvent'; courseId: string; eventId: string; patch: Partial<ExtractedEvent> }
-  | { type: 'addEvent'; courseId: string }
+  | { type: 'addEvent'; courseId: string; preset?: { date: string; title: string; source?: string } }
   | { type: 'deleteEvent'; courseId: string; eventId: string }
   | { type: 'setReminder'; reminder: Reminder }
   | { type: 'setStep'; step: Step }
@@ -113,6 +116,11 @@ export function reducer(state: State, action: Action): State {
     }
     case 'update':
       return mapCourse(state, action.id, (c) => ({ ...c, ...action.patch }))
+    case 'setTerm':
+      // The term decides which dates count as inside the semester, so changing it has to read
+      // the syllabus again. Going through reread keeps every edit the student has already made
+      // and reports what the new term recovered or dropped.
+      return mapCourse(state, action.id, (c) => (c.text.trim() ? reread(c, c.text, action.term) : { ...c, term: action.term }))
     case 'setEvents':
       return mapCourse(state, action.id, (c) => ({ ...c, events: action.events, extracted: true }))
     case 'mergeEvents':
@@ -139,8 +147,15 @@ export function reducer(state: State, action: Action): State {
         const blank = first && courses.length > 0 && !last.name.trim() && !last.text.trim()
         first = false
         const base = blank ? courses.pop()! : newCourse()
-        const name = base.name.trim() || f.name
-        courses.push({ ...reread(base, f.text), name, viaPhoto: f.viaPhoto === true })
+        // The file name is the first guess, and the text answers when it has nothing to say: a
+        // pasted syllabus has no file name, and a class with dates cannot leave the first screen
+        // unnamed. The text also wins when it names a course code and the file name does not,
+        // because a photographed syllabus is called IMG_4821 and its first line is CHEM 120.
+        const fromText = nameFromText(f.text)
+        const fromFile = f.name.trim()
+        const name = base.name.trim() || (looksLikeCode(fromText) && !looksLikeCode(fromFile) ? fromText : fromFile || fromText)
+        const term = termFromText(f.text) ?? base.term
+        courses.push({ ...reread(base, f.text, term), name, viaPhoto: f.viaPhoto === true })
       }
       return { ...state, courses }
     }
@@ -158,11 +173,25 @@ export function reducer(state: State, action: Action): State {
         events: c.events.map((e) => (e.id === action.eventId ? { ...e, ...action.patch } : e)),
       }))
     case 'addEvent':
-      return mapCourse(state, action.courseId, (c) => ({
-        ...c,
-        extracted: true,
-        events: [...c.events, { id: newId(), date: '', title: '', confidence: 'high', include: true }],
-      }))
+      return mapCourse(state, action.courseId, (c) => {
+        // A row added from the read report arrives with the date and the line already on it, so
+        // recovering a deadline the term window hid is a tap rather than a retype. It counts as
+        // low confidence because the student, not extraction, decided it belongs.
+        const preset = action.preset
+        const row: ExtractedEvent = preset
+          ? {
+              id: newId(),
+              date: preset.date,
+              title: preset.title,
+              confidence: 'low',
+              reason: 'added from the syllabus text',
+              include: true,
+              source: preset.source,
+              manual: true,
+            }
+          : { id: newId(), date: '', title: '', confidence: 'high', include: true }
+        return { ...c, extracted: true, events: [...c.events, row] }
+      })
     case 'deleteEvent':
       return mapCourse(state, action.courseId, (c) => ({
         ...c,
@@ -215,6 +244,7 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
   return {
     id: e.id,
     date: e.date,
+    endDate: isStr(e.endDate) ? e.endDate : undefined,
     title: e.title,
     time: isStr(e.time) ? e.time : undefined,
     confidence: e.confidence === 'low' ? 'low' : 'high',
@@ -223,6 +253,7 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
     origDate: isStr(e.origDate) ? e.origDate : undefined,
     origTitle: isStr(e.origTitle) ? e.origTitle : undefined,
     source: isStr(e.source) ? e.source : undefined,
+    manual: e.manual === true ? true : undefined,
     missing: e.missing === true ? true : undefined,
   }
 }

@@ -40,6 +40,15 @@ describe('ClassRow', () => {
     expect(confirmSpy).not.toHaveBeenCalled()
     confirmSpy.mockRestore()
   })
+  it('changing the term asks for a re-read, not a plain field update', () => {
+    const dispatch = vi.fn()
+    render(<ClassRow course={course({})} index={0} dispatch={dispatch} onEditText={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Term'), { target: { value: 'Spring' } })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'setTerm', id: 'c1', term: { season: 'Spring', year: 2026 } })
+    fireEvent.change(screen.getByLabelText('Year'), { target: { value: '2027' } })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'setTerm', id: 'c1', term: { season: 'Fall', year: 2027 } })
+  })
+
   it('shows the date count pill', () => {
     render(<ClassRow course={course({})} index={0} dispatch={() => {}} onEditText={() => {}} />)
     expect(screen.getByText('1 date')).toBeTruthy()

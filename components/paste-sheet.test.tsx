@@ -29,6 +29,29 @@ describe('PasteSheet', () => {
     const types = dispatch.mock.calls.map(([a]) => a.type)
     expect(types).toEqual(['update', 'mergeEvents'])
   })
+  it('fills the name and the term from the pasted syllabus, so nothing has to be typed', () => {
+    const dispatch = vi.fn()
+    render(<PasteSheet course={null} dispatch={dispatch} onClose={() => {}} />)
+    fireEvent.change(screen.getByPlaceholderText(/paste the syllabus/i), {
+      target: { value: 'PSYC 101: Introduction to Psychology\nSpring 2027\nFeb 2: Problem set 1' },
+    })
+    expect((screen.getByLabelText('Class name') as HTMLInputElement).value).toBe('PSYC 101')
+    expect((screen.getByLabelText('Term') as HTMLSelectElement).value).toBe('Spring')
+    expect((screen.getByLabelText('Year') as HTMLSelectElement).value).toBe('2027')
+    expect((screen.getByRole('button', { name: /add class/i }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('never overwrites a name or a term the student set themselves', () => {
+    render(<PasteSheet course={null} dispatch={vi.fn()} onClose={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Class name'), { target: { value: 'My psych class' } })
+    fireEvent.change(screen.getByLabelText('Term'), { target: { value: 'Winter' } })
+    fireEvent.change(screen.getByPlaceholderText(/paste the syllabus/i), {
+      target: { value: 'PSYC 101: Introduction to Psychology\nSpring 2027' },
+    })
+    expect((screen.getByLabelText('Class name') as HTMLInputElement).value).toBe('My psych class')
+    expect((screen.getByLabelText('Term') as HTMLSelectElement).value).toBe('Winter')
+  })
+
   it('closes on Escape', () => {
     const onClose = vi.fn()
     render(<PasteSheet course={null} dispatch={() => {}} onClose={onClose} />)

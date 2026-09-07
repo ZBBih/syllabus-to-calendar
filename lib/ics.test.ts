@@ -13,6 +13,12 @@ describe('buildIcs', () => {
     expect(out).toMatch(/UID:[0-9a-f]{16}@syllabify\.app/)
   })
 
+  it('spans a multi-day event to the day after its last day', () => {
+    const out = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-10-20', endDate: '2026-10-21', title: 'Fall break' }] }])
+    expect(out).toContain('DTSTART;VALUE=DATE:20261020')
+    expect(out).toContain('DTEND;VALUE=DATE:20261022')
+  })
+
   it('serialises a timed event as one hour floating', () => {
     const out = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '14:00', title: 'Final' }] }])
     expect(out).toContain('DTSTART:20260914T140000')

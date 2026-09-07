@@ -224,3 +224,124 @@ describe('the landing gate', () => {
     expect(s.step).toBe(0)
   })
 })
+
+describe('store: term and name read from the syllabus', () => {
+  it('changing the term re-reads the syllabus and recovers the dates it was hiding', () => {
+    // Read under Fall 2026 a May deadline is past the end of the term window and is dropped.
+    const s = reducer(initialState(), {
+      type: 'addFromFiles',
+      files: [{ name: 'MATH 21', text: 'May 4: Final exam' }],
+    })
+    const id = s.courses[0].id
+    const fall = reducer(s, { type: 'setTerm', id, term: { season: 'Fall', year: 2026 } })
+    expect(fall.courses[0].events).toHaveLength(0)
+
+    const spring = reducer(fall, { type: 'setTerm', id, term: { season: 'Spring', year: 2027 } })
+    expect(spring.courses[0].term).toEqual({ season: 'Spring', year: 2027 })
+    expect(spring.courses[0].events.map((e) => e.date)).toEqual(['2027-05-04'])
+  })
+
+  it('changing the term keeps a title the student has edited', () => {
+    const s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'X', text: 'Sept 14: Quiz 1' }] })
+    const id = s.courses[0].id
+    const edited = reducer(s, {
+      type: 'updateEvent',
+      courseId: id,
+      eventId: s.courses[0].events[0].id,
+      patch: { title: 'Quiz 1 (open book)' },
+    })
+    const again = reducer(edited, { type: 'setTerm', id, term: { season: 'Fall', year: 2026 } })
+    expect(again.courses[0].events[0].title).toBe('Quiz 1 (open book)')
+  })
+
+  it('a term set before there is any text is simply stored', () => {
+    const s0 = initialState()
+    const s = reducer(s0, { type: 'setTerm', id: s0.courses[0].id, term: { season: 'Winter', year: 2026 } })
+    expect(s.courses[0].term).toEqual({ season: 'Winter', year: 2026 })
+    expect(s.courses[0].extracted).toBe(false)
+  })
+
+  it('takes the class name from the text when the file name gives nothing', () => {
+    const s = reducer(initialState(), {
+      type: 'addFromFiles',
+      files: [{ name: '', text: 'PSYC 101: Introduction to Psychology\nFall 2026\nSept 14: Quiz 1' }],
+    })
+    expect(s.courses[0].name).toBe('PSYC 101')
+  })
+
+  it('a course code in the text beats a file name that is not one', () => {
+    const s = reducer(initialState(), {
+      type: 'addFromFiles',
+      files: [{ name: 'IMG 4821', text: 'CHEM 120: General Chemistry\nSept 15 Lab notebook check', viaPhoto: true }],
+    })
+    expect(s.courses[0].name).toBe('CHEM 120')
+  })
+
+  it('a file name that is itself a course code still wins', () => {
+    const s = reducer(initialState(), {
+      type: 'addFromFiles',
+      files: [{ name: 'BIOL 210', text: 'PSYC 101: Introduction to Psychology\nSept 14: Quiz 1' }],
+    })
+    expect(s.courses[0].name).toBe('BIOL 210')
+  })
+
+  it('takes the term from the text so out-of-window dates survive', () => {
+    const s = reducer(initialState(), {
+      type: 'addFromFiles',
+      files: [{ name: 'MATH 21', text: 'MATH 21\nSpring 2027\nFeb 2: Problem set 1' }],
+    })
+    expect(s.courses[0].term).toEqual({ season: 'Spring', year: 2027 })
+    expect(s.courses[0].events.map((e) => e.date)).toEqual(['2027-02-02'])
+  })
+
+  it('keeps an end date across a save and a load', () => {
+    const state = initialState()
+    const course = state.courses[0]
+    const saved = {
+      ...state,
+      courses: [{ ...course, events: [{ id: 'e1', date: '2026-10-20', endDate: '2026-10-21', title: 'Fall break', confidence: 'high', include: true }] }],
+    }
+    const back = sanitize(JSON.parse(JSON.stringify(saved)))
+    expect(back?.courses[0].events[0].endDate).toBe('2026-10-21')
+  })
+})
+
+describe('store: keeping a date from the read report', () => {
+  it('adds a row carrying the date, the title and the syllabus line', () => {
+    const s0 = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'MATH 21', text: 'Sept 14: Quiz' }] })
+    const id = s0.courses[0].id
+    const s1 = reducer(s0, {
+      type: 'addEvent',
+      courseId: id,
+      preset: { date: '2027-05-04', title: 'Final exam', source: 'May 4: Final exam' },
+    })
+    const row = s1.courses[0].events.at(-1)!
+    expect(row).toMatchObject({
+      date: '2027-05-04',
+      title: 'Final exam',
+      source: 'May 4: Final exam',
+      include: true,
+      confidence: 'low',
+      reason: 'added from the syllabus text',
+    })
+  })
+
+  it('a plain Row is still blank', () => {
+    const s0 = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'MATH 21', text: 'Sept 14: Quiz' }] })
+    const s1 = reducer(s0, { type: 'addEvent', courseId: s0.courses[0].id })
+    expect(s1.courses[0].events.at(-1)).toMatchObject({ date: '', title: '', confidence: 'high' })
+  })
+
+  it('a kept row has no original date, so a re-read never claims it went missing', () => {
+    const s0 = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'MATH 21', text: 'Sept 14: Quiz' }] })
+    const id = s0.courses[0].id
+    const s1 = reducer(s0, {
+      type: 'addEvent',
+      courseId: id,
+      preset: { date: '2027-05-04', title: 'Final exam', source: 'May 4: Final exam' },
+    })
+    const s2 = reducer(s1, { type: 'mergeEvents', id, events: extractEvents('Sept 14: Quiz', { season: 'Fall', year: 2026 }) })
+    expect(s2.courses[0].events.find((e) => e.title === 'Final exam')?.missing).toBeUndefined()
+  })
+})
+

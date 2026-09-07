@@ -82,7 +82,7 @@ export function ClassRow({
         <select
           value={course.term.season}
           aria-label="Term"
-          onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, season: e.target.value as Season } } })}
+          onChange={(e) => dispatch({ type: 'setTerm', id: course.id, term: { ...course.term, season: e.target.value as Season } })}
           className="field w-auto py-1 text-xs"
         >
           {SEASONS.map((s) => (
@@ -92,7 +92,7 @@ export function ClassRow({
         <select
           value={course.term.year}
           aria-label="Year"
-          onChange={(e) => dispatch({ type: 'update', id: course.id, patch: { term: { ...course.term, year: Number(e.target.value) } } })}
+          onChange={(e) => dispatch({ type: 'setTerm', id: course.id, term: { ...course.term, year: Number(e.target.value) } })}
           className="field w-auto py-1 text-xs"
         >
           {YEARS.map((y) => (

@@ -1,11 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useState, type Dispatch } from 'react'
+import { createPortal } from 'react-dom'
 import { extractEvents, SEASONS, type Season, type Term } from '@/lib/extract'
 import { defaultTerm, type Action, type Course } from '@/lib/store'
 import { FileDrop } from './file-drop'
 import { X } from './icons'
-import { nameFromFileName } from '@/lib/course-name'
+import { nameFromFileName, nameFromText } from '@/lib/course-name'
+import { termFromText } from '@/lib/term'
 
 const thisYear = new Date().getFullYear()
 const YEARS = [thisYear - 1, thisYear, thisYear + 1]
@@ -14,7 +16,25 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
   const [name, setName] = useState(course?.name ?? '')
   const [term, setTerm] = useState<Term>(course?.term ?? defaultTerm())
   const [text, setText] = useState(course?.text ?? '')
+  const [termTouched, setTermTouched] = useState(false)
   const area = useRef<HTMLTextAreaElement>(null)
+
+  /**
+   * Take whatever the syllabus itself says for the fields the student has not filled in.
+   *
+   * The name is a gate: nothing can be added without one, and pasted text has no file name to
+   * guess from, so this is the difference between tapping through and typing on a phone. The
+   * term decides which dates count as inside the semester, so a syllabus for another term reads
+   * as empty until it is right.
+   */
+  function readFromText(next: string) {
+    setText(next)
+    if (!name.trim()) setName(nameFromText(next))
+    if (!termTouched) {
+      const found = termFromText(next)
+      if (found) setTerm(found)
+    }
+  }
 
   useEffect(() => {
     area.current?.focus()
@@ -36,7 +56,12 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
     onClose()
   }
 
-  return (
+  // Portalled for the same reason as the read report: a fixed sheet inside an element that has
+  // any transform, including the identity one an entrance animation leaves behind, is positioned
+  // against that element rather than the viewport.
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <>
       <div className="sheet-backdrop" onClick={onClose} />
       <div role="dialog" aria-modal="true" aria-labelledby="sheet-title" className="sheet">
@@ -58,12 +83,28 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
               </button>
             )}
           </div>
-          <select value={term.season} aria-label="Term" onChange={(e) => setTerm({ ...term, season: e.target.value as Season })} className="field w-auto">
+          <select
+            value={term.season}
+            aria-label="Term"
+            onChange={(e) => {
+              setTermTouched(true)
+              setTerm({ ...term, season: e.target.value as Season })
+            }}
+            className="field w-auto"
+          >
             {SEASONS.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
-          <select value={term.year} aria-label="Year" onChange={(e) => setTerm({ ...term, year: Number(e.target.value) })} className="field w-auto">
+          <select
+            value={term.year}
+            aria-label="Year"
+            onChange={(e) => {
+              setTermTouched(true)
+              setTerm({ ...term, year: Number(e.target.value) })
+            }}
+            className="field w-auto"
+          >
             {YEARS.map((y) => (
               <option key={y}>{y}</option>
             ))}
@@ -73,8 +114,9 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
         <FileDrop
           className="mt-3"
           onFiles={([f]) => {
-            setText(f.text)
-            if (!name.trim()) setName(nameFromFileName(f.fileName))
+            readFromText(f.text)
+            const fromFile = nameFromFileName(f.fileName)
+            if (fromFile && !name.trim()) setName(fromFile)
           }}
         />
 
@@ -82,7 +124,7 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
           <textarea
             ref={area}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => readFromText(e.target.value)}
             rows={10}
             placeholder="Paste the syllabus here. The schedule section is all it needs, though the grading table is worth including too."
             className="field font-mono text-xs"
@@ -103,6 +145,7 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   )
 }

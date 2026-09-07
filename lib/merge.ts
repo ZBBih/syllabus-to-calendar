@@ -29,8 +29,15 @@ function exactKey(e: ExtractedEvent) {
   return `${e.origDate ?? e.date}|${normTitle(e.origTitle ?? e.title)}`
 }
 
-/** A row the user typed by hand has no source line, so a re-run should never claim it went missing. */
+/**
+ * A row the user typed by hand should never be claimed as missing by a re-run.
+ *
+ * Usually that shows as the absence of a source line, but a row kept from the read report
+ * carries the syllabus line it came from as its description while still being the student's
+ * own decision, so it says so outright.
+ */
 function fromExtraction(e: ExtractedEvent) {
+  if (e.manual) return false
   return Boolean(e.source || e.origTitle !== undefined)
 }
 

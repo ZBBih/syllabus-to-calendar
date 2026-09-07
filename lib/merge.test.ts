@@ -121,3 +121,28 @@ describe('mergeWithDiff', () => {
     expect(diff.moved.map((m) => m.id)).toEqual(['a'])
   })
 })
+
+describe('mergeWithDiff: rows the student kept themselves', () => {
+  it('never retires a manual row, even though it carries a syllabus line', () => {
+    const kept: ExtractedEvent = {
+      id: 'k1',
+      date: '2027-05-04',
+      title: 'Final exam',
+      source: 'May 4: Final exam',
+      manual: true,
+      confidence: 'low',
+      include: true,
+    }
+    const existing: ExtractedEvent[] = [
+      { id: 'a', date: '2026-09-14', title: 'Quiz', origDate: '2026-09-14', origTitle: 'Quiz', source: 'Sept 14: Quiz', confidence: 'high', include: true },
+      kept,
+    ]
+    const fresh: ExtractedEvent[] = [
+      { id: 'b', date: '2026-09-14', title: 'Quiz', origDate: '2026-09-14', origTitle: 'Quiz', source: 'Sept 14: Quiz', confidence: 'high', include: true },
+    ]
+    const { events, diff } = mergeWithDiff(existing, fresh)
+    expect(events.find((e) => e.id === 'k1')?.missing).toBeUndefined()
+    expect(diff.missing).toEqual([])
+  })
+})
+
