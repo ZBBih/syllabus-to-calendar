@@ -14,6 +14,12 @@ const PERCENT_LEADING = /^(\d{1,3}(?:\.\d)?)\s*%\s*[\s.·:…\-]*(.{2,60}?)\s*$/
 const DROP = /\b(late|penalt|per day|per class|deduct|attendance polic|curve|scale|minimum|at least|below|above|threshold|extra credit|bonus)\b/i
 const GRADE_SCALE = /^[A-F][+-]?\b/
 const CLEAN = /^[\s\-–—:|•*.,\d)(]+|[\s\-–—:|•*.,]+$/g
+// A syllabus often writes the whole breakdown as one sentence rather than a table:
+// "Grading: Problem sets 20%, Quizzes 15%, Midterm 25%". These pick the pairs out of it.
+const LEAD_IN = /^(?:grading|grades?|grade breakdown|assessment|evaluation|course grade|final grade|weighting|weights?)\s*[:\-–—]\s*/i
+const PERCENT_TOKEN = /\d{1,3}(?:\.\d)?\s*%/g
+// Lazy label, so "Exam 1 20%" keeps its number while "Exams 40%" stops before the weight.
+const PAIR = /([A-Za-z][^%]{0,59}?)\s*[:\-–—]?\s*(\d{1,3}(?:\.\d)?)\s*%/g
 
 function cleanLabel(s: string) {
   return s
@@ -33,25 +39,46 @@ function cleanLabel(s: string) {
  * nothing rather than a plausible-looking wrong answer. A student can always add rows by hand.
  */
 export function extractWeights(text: string): Weight[] {
-  const found: { label: string; weight: number }[] = []
+  const found: { label: string; weight: number; inline: boolean }[] = []
+  let readingInline = false
+  const keep = (rawLabel: string, rawWeight: string) => {
+    const label = cleanLabel(rawLabel)
+    const weight = Number(rawWeight)
+    if (!label || label.length < 2 || weight <= 0 || weight > 100) return
+    if (/^\d+$/.test(label)) return
+    if (DROP.test(label)) return
+    found.push({ label, weight, inline: readingInline })
+  }
+
   for (const raw of text.split('\n')) {
     const line = raw.trim()
-    if (!line || line.length > 80) continue
+    if (!line) continue
     if (DROP.test(line)) continue
     if (GRADE_SCALE.test(line)) continue
 
+    // Several percentages on one line means the breakdown is written as prose, not a table.
+    // Each label-and-weight pair is read out of it; the sum guard below still decides whether
+    // any of it was really a grading breakdown.
+    const inline = line.match(PERCENT_TOKEN)
+    if (inline && inline.length > 1) {
+      if (line.length > 300) continue
+      const body = line.replace(LEAD_IN, '')
+      if (GRADE_SCALE.test(body)) continue
+      readingInline = true
+      for (const m of body.matchAll(PAIR)) keep(m[1], m[2])
+      readingInline = false
+      continue
+    }
+
+    if (line.length > 80) continue
     // "Homework 25%" is by far the common shape; "25% Homework" is the same table transposed.
     const trailing = PERCENT_LINE.exec(line)
     const leading = trailing ? null : PERCENT_LEADING.exec(line)
     if (!trailing && !leading) continue
-    const label = cleanLabel(trailing ? trailing[1] : leading![2])
-    const weight = Number(trailing ? trailing[2] : leading![1])
-    if (!label || label.length < 2 || weight <= 0 || weight > 100) continue
-    if (/^\d+$/.test(label)) continue
-    found.push({ label, weight })
+    keep(trailing ? trailing[1] : leading![2], trailing ? trailing[2] : leading![1])
   }
 
-  const byLabel = new Map<string, { label: string; weight: number }>()
+  const byLabel = new Map<string, { label: string; weight: number; inline: boolean }>()
   for (const f of found) {
     const k = f.label.toLowerCase()
     if (!byLabel.has(k)) byLabel.set(k, f)
@@ -59,8 +86,13 @@ export function extractWeights(text: string): Weight[] {
   const rows = [...byLabel.values()]
   if (rows.length < 2) return []
 
+  // The sum is the whole precision guard, and prose needs a stricter one than a table does.
+  // A table can be read off a PDF with a digit misread, so it gets room; a sentence that
+  // happens to contain percentages ("attendance is 95% expected... 12% of the time") lands
+  // inside a loose window by luck, and a breakdown actually written out always totals 100.
   const total = rows.reduce((n, r) => n + r.weight, 0)
-  if (total < 90 || total > 110) return []
+  const strict = rows.every((r) => r.inline)
+  if (total < (strict ? 98 : 90) || total > (strict ? 102 : 110)) return []
 
   return rows.map((r) => ({ id: newId(), label: r.label, weight: r.weight }))
 }

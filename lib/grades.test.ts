@@ -4,6 +4,36 @@ import { extractWeights, gradeSummary, letterFor, mergeWeights, type Weight } fr
 const w = (label: string, weight: number, earned?: number): Weight => ({ id: label, label, weight, earned })
 
 describe('extractWeights', () => {
+  it('reads a breakdown written as one sentence', () => {
+    const w = extractWeights('BIOL 210\nGrading: Problem sets 20%, Quizzes 15%, Midterm 25%, Final paper 15%, Final exam 25%\n')
+    expect(w.map((x) => [x.label, x.weight])).toEqual([
+      ['Problem sets', 20],
+      ['Quizzes', 15],
+      ['Midterm', 25],
+      ['Final paper', 15],
+      ['Final exam', 25],
+    ])
+  })
+  it('keeps a number that belongs to the label', () => {
+    const w = extractWeights('Exam 1 25%; Exam 2 25%; Final 50%')
+    expect(w.map((x) => x.label)).toEqual(['Exam 1', 'Exam 2', 'Final'])
+  })
+  it('reads a sentence joined by and', () => {
+    const w = extractWeights('Your grade is coursework 60% and the final exam 40%.')
+    expect(w.reduce((n, x) => n + x.weight, 0)).toBe(100)
+  })
+  it('ignores a letter-grade scale written inline', () => {
+    expect(extractWeights('Grades: A 93%, B 83%, C 73%, D 63%')).toEqual([])
+    expect(extractWeights('A 93%, B 83%, C 73%, D 63%')).toEqual([])
+  })
+  it('ignores an inline list of percentages that is not a breakdown', () => {
+    expect(extractWeights('Attendance is 95% expected and participation matters 12% of the time')).toEqual([])
+  })
+  it('drops a late penalty mentioned alongside real categories', () => {
+    const w = extractWeights('Homework 40%, Exams 60%\nLate work loses 10% per day')
+    expect(w.map((x) => x.label)).toEqual(['Homework', 'Exams'])
+  })
+
   it('reads a plain grading table', () => {
     const out = extractWeights(`Grading
 Participation 10%
