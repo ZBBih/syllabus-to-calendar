@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Instrument_Serif, Geist } from 'next/font/google'
 import './globals.css'
+import { SITE_URL } from '@/lib/site'
 
 // An editorial serif for display against a neutral grotesk for everything else. The previous
 // rounded display face is the default of every generated landing page, which is exactly why
@@ -13,7 +14,8 @@ const description =
   'Drop your syllabi and get every deadline on your calendar. No account, no class limit, and the file never leaves your device.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://syllabus-to-calendar-ten.vercel.app'),
+  metadataBase: new URL(SITE_URL),
+  alternates: { canonical: '/' },
   title: { default: `${title}: syllabus to calendar, no account`, template: `%s · ${title}` },
   description,
   applicationName: title,
