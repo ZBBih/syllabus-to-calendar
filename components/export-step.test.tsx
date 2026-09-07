@@ -3,6 +3,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ExportStep, defaultTab } from './export-step'
 import type { State } from '@/lib/store'
+import { SITE_URL } from '@/lib/site'
 
 afterEach(cleanup)
 
@@ -86,7 +87,7 @@ describe('ExportStep', () => {
     // The link rides inside the text: iOS Messages keeps a url and throws the sentence away.
     const [[arg]] = share.mock.calls
     expect(arg.url).toBeUndefined()
-    expect(arg.text).toContain('https://syllabus-to-calendar-ten.vercel.app')
+    expect(arg.text).toContain(SITE_URL)
     expect(arg.text).toContain('No account, free.')
   })
 
@@ -98,7 +99,7 @@ describe('ExportStep', () => {
     render(<ExportStep state={base} dispatch={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
     fireEvent.click(await screen.findByRole('button', { name: /send this to a friend/i }))
-    expect(writeText).toHaveBeenCalledWith('https://syllabus-to-calendar-ten.vercel.app')
+    expect(writeText).toHaveBeenCalledWith(SITE_URL)
     expect(await screen.findByText(/link copied/i)).toBeTruthy()
   })
 

@@ -2,7 +2,7 @@
 
 Drop your syllabi and get every deadline on your calendar. Runs entirely in your browser: no account, no class limit, no API key, and nothing is uploaded anywhere.
 
-Live: https://syllabus-to-calendar-ten.vercel.app
+Live: https://syllabify-app.vercel.app
 
 ## Where this sits
 

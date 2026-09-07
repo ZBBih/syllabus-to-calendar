@@ -6,8 +6,12 @@
  * manifest. When the custom domain arrives, this is the only line that changes.
  *
  * No trailing slash: everything here appends its own path.
+ *
+ * The generated name this project deployed under read as "syllabus to calendar" wherever a
+ * shared link showed its domain, which is not what the thing is called. The old host stays
+ * aliased to the same deployment, so every link already in the world keeps working.
  */
-export const SITE_URL = 'https://syllabus-to-calendar-ten.vercel.app'
+export const SITE_URL = 'https://syllabify-app.vercel.app'
 
 /**
  * When the page's content last meaningfully changed, in UTC.
