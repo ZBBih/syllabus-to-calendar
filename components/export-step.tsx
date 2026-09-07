@@ -247,8 +247,8 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
             </li>
             {plan.cancelled > 0 && (
               <li>
-                {plan.cancelled} event{plan.cancelled === 1 ? '' : 's'} you have since removed will be withdrawn. Google and Apple honour this; a few smaller
-                calendar apps ignore withdrawals and you would have to delete those by hand.
+                {plan.cancelled} event{plan.cancelled === 1 ? '' : 's'} you have since removed will be marked cancelled. Apple Calendar strikes those through
+                and leaves them in place rather than deleting them, so remove any you no longer want to see; other apps vary, and some drop them outright.
               </li>
             )}
           </ul>

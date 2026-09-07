@@ -48,15 +48,31 @@ export const REMINDERS: { value: Reminder; label: string }[] = [
   { value: 'none', label: 'No reminder' },
 ]
 
-function trigger(r: Reminder, allDay: boolean): string | null {
+/**
+ * When the alarm fires, as an offset from the event's own start.
+ *
+ * "Morning of" used to fall back to one hour before on any event that had a time, on the
+ * grounds that 8am was unknowable — but the start time is right there, so the offset back to
+ * 8am is simple arithmetic. A 2pm exam now warns at 8am as the label promises, rather than at
+ * 1pm. An event that begins at or before 8am has no morning left to warn in, so it keeps the
+ * hour's notice.
+ */
+function trigger(r: Reminder, time: string | undefined): string | null {
   switch (r) {
     case '1d':
       return '-P1D'
     case '2d':
       return '-P2D'
-    case 'morning':
-      // All-day events start at 00:00, so +8h lands at 8am. Timed events: 8am same day relative to start is unknowable, use -PT0M... fall back to 1 hour before.
-      return allDay ? 'PT8H' : '-PT1H'
+    case 'morning': {
+      // All-day events start at 00:00, so +8h lands at 8am.
+      if (!time) return 'PT8H'
+      const [h, m] = time.split(':').map(Number)
+      const minutesAfterEight = h * 60 + m - 8 * 60
+      if (minutesAfterEight <= 0) return '-PT1H'
+      const hh = Math.floor(minutesAfterEight / 60)
+      const mm = minutesAfterEight % 60
+      return `-PT${hh > 0 ? `${hh}H` : ''}${mm > 0 ? `${mm}M` : ''}`
+    }
     case 'none':
       return null
   }
@@ -165,7 +181,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
       }
       lines.push(`SUMMARY:${escapeIcs(summary)}`)
       if (ev.source && ev.source.trim() !== ev.title.trim()) lines.push(`DESCRIPTION:${escapeIcs(ev.source.trim())}`)
-      const trig = trigger(reminder, !ev.time)
+      const trig = trigger(reminder, ev.time)
       if (trig) {
         lines.push('BEGIN:VALARM')
         lines.push('ACTION:DISPLAY')

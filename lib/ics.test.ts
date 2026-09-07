@@ -25,6 +25,21 @@ describe('buildIcs', () => {
     expect(out).toContain('DTEND:20260914T235959')
   })
 
+  it('fires "morning of" at 8am on the day, whatever time the event starts', () => {
+    const two = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '14:00', title: 'Exam' }] }], 'morning')
+    expect(two).toContain('TRIGGER:-PT6H')
+    const half = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '09:30', title: 'Quiz' }] }], 'morning')
+    expect(half).toContain('TRIGGER:-PT1H30M')
+    const late = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '23:59', title: 'Paper' }] }], 'morning')
+    expect(late).toContain('TRIGGER:-PT15H59M')
+    // An all-day event starts at midnight, so the alarm counts forward to 8am.
+    const allDay = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', title: 'Reading' }] }], 'morning')
+    expect(allDay).toContain('TRIGGER:PT8H')
+    // Before 8am there is no morning left, so the hour's notice stands.
+    const early = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', time: '07:00', title: 'Lab' }] }], 'morning')
+    expect(early).toContain('TRIGGER:-PT1H')
+  })
+
   it('escapes and folds and uses CRLF', () => {
     const long = 'A'.repeat(120)
     const out = buildIcs([{ name: 'ECON 101', events: [{ ...base, date: '2026-09-14', title: `Midterm, part 1; ${long}` }] }])
