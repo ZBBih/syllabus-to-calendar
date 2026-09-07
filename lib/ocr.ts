@@ -34,21 +34,50 @@ export class OcrFailedError extends Error {
   }
 }
 
+/**
+ * The recogniser did not start, or fell over part way.
+ *
+ * tesseract rejects with a bare string from inside its worker, which arrives here as something
+ * that is not an Error and gets reported as "could not read that file" - true, useless, and
+ * impossible to act on. The cause travels with the message instead.
+ */
+export class OcrUnavailableError extends Error {
+  constructor(stage: 'start' | 'read', cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : typeof cause === 'string' ? cause : ''
+    super(
+      stage === 'start'
+        ? `Could not start the text recogniser${detail ? ` (${detail})` : ''}. Reload the page and try again, or paste the text instead.`
+        : `Could not finish reading that picture${detail ? ` (${detail})` : ''}. Try again, or paste the text instead.`,
+    )
+    this.name = 'OcrUnavailableError'
+  }
+}
+
 export async function imageToText(file: File, onProgress?: OcrProgress): Promise<string> {
   const canvas = await toBitmap(file)
-  const { createWorker } = await import('tesseract.js')
-  const worker = await createWorker('eng', 1, {
-    workerPath: '/tesseract/worker.min.js',
-    corePath: '/tesseract',
-    langPath: '/tesseract',
-    gzip: true,
-    logger: onProgress ? (m: { status: string; progress: number }) => m.status === 'recognizing text' && onProgress(m.progress) : undefined,
-  })
+
+  let worker: Awaited<ReturnType<typeof import('tesseract.js').createWorker>>
+  try {
+    const { createWorker } = await import('tesseract.js')
+    worker = await createWorker('eng', 1, {
+      workerPath: '/tesseract/worker.min.js',
+      corePath: '/tesseract',
+      langPath: '/tesseract',
+      gzip: true,
+      logger: onProgress ? (m: { status: string; progress: number }) => m.status === 'recognizing text' && onProgress(m.progress) : undefined,
+    })
+  } catch (e) {
+    throw new OcrUnavailableError('start', e)
+  }
+
   try {
     const { data } = await worker.recognize(canvas)
     const text = (data.text ?? '').trim()
     if (!text) throw new OcrFailedError()
     return text
+  } catch (e) {
+    if (e instanceof OcrFailedError) throw e
+    throw new OcrUnavailableError('read', e)
   } finally {
     await worker.terminate()
   }

@@ -37,7 +37,10 @@ export function FileDrop({ onFiles, multiple = false, hero = false, className = 
         })
         done.push({ fileName: file.name, text, viaPhoto: isImage(file) })
       } catch (e) {
-        errs.push(`${file.name}: ${e instanceof Error ? e.message : 'could not read that file.'}`)
+        // Never swallow the reason: a bare "could not read that file" is not something a
+        // student can act on, and it is not something they can report back either.
+        const why = e instanceof Error ? e.message : String(e ?? '').trim()
+        errs.push(`${file.name}: ${why || 'could not read that file.'}`)
       }
     }
     setBusy(null)
