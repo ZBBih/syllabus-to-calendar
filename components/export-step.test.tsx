@@ -72,6 +72,32 @@ describe('ExportStep', () => {
     expect(screen.getByText(/2 deadlines across 1 class,/i)).toBeTruthy()
     expect((screen.getByRole('button', { name: /add to my calendar/i }) as HTMLButtonElement).disabled).toBe(false)
   })
+  it('offers the link once the file is out, and hands it to the share sheet', async () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true, writable: true })
+    render(<ExportStep state={base} dispatch={() => {}} />)
+    // Nothing to pass on until the student has actually got their file.
+    expect(screen.queryByRole('button', { name: /send this to a friend/i })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /send this to a friend/i }))
+    await Promise.resolve()
+    expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://syllabus-to-calendar-ten.vercel.app' }))
+  })
+
+  it('copies the link and says so when there is no share sheet', async () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    Object.defineProperty(navigator, 'share', { value: undefined, configurable: true, writable: true })
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true, writable: true })
+    render(<ExportStep state={base} dispatch={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /send this to a friend/i }))
+    expect(writeText).toHaveBeenCalledWith('https://syllabus-to-calendar-ten.vercel.app')
+    expect(await screen.findByText(/link copied/i)).toBeTruthy()
+  })
+
   it('downloads one class from the menu using a slug file name', () => {
     const state: State = { ...base, courses: [base.courses[0], { ...base.courses[1], name: 'PSYC 200' }] }
     const create = vi.fn(() => 'blob:x')

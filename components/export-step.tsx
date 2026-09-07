@@ -8,6 +8,7 @@ import { previewRows } from './date-preview'
 import { Confetti } from './confetti'
 import { ArtCrop } from './hero-art'
 import { ArrowLeft, Check, Upload } from './icons'
+import { SITE_URL } from '@/lib/site'
 
 const GUIDES = {
   Google: [
@@ -65,6 +66,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const [tab, setTab] = useState<Tab>(() => (typeof navigator === 'undefined' ? 'Google' : defaultTab(navigator.userAgent)))
   const [done, setDone] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
+  const [shared, setShared] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(0)
   const canShare = useSyncExternalStore(noop, canShareFiles, () => false)
 
@@ -110,6 +112,26 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       downloadAll()
+    }
+  }
+
+  /**
+   * The link, not the file. This is the moment the student has just seen it work, and it is the
+   * only place the app ever asks for anything: a share sheet where there is one, the clipboard
+   * everywhere else, and a plain instruction if the browser refuses both.
+   */
+  async function shareSite() {
+    const text = 'Syllabify put my whole semester on my calendar in about a minute. No account, free.'
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({ title: 'Syllabify', text, url: SITE_URL })
+        return
+      }
+      await navigator.clipboard.writeText(SITE_URL)
+      setShared('Link copied.')
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      setShared(SITE_URL)
     }
   }
 
@@ -161,11 +183,19 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
               </div>
               <p className="mt-4 font-display text-2xl">Done.</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
-              <div className="mt-5">
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <button type="button" onClick={addToCalendar} disabled={!ready} className="btn btn-secondary">
                   Do that again
                 </button>
+                <button type="button" onClick={shareSite} className="btn btn-secondary">
+                  Send this to a friend
+                </button>
               </div>
+              {shared && (
+                <p role="status" className="mt-2 text-xs text-muted">
+                  {shared}
+                </p>
+              )}
             </>
           ) : (
             <>
@@ -280,7 +310,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
         </p>
       </div>
 
-      <div className="mt-8 flex items-center justify-between gap-3">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={() => dispatch({ type: 'setStep', step: 2 })} className="btn btn-secondary">
           <ArrowLeft size={15} /> Back
         </button>
