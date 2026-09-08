@@ -164,7 +164,8 @@ function compact(date: string) {
   return date.replace(/-/g, '')
 }
 
-function nextDay(date: string) {
+/** The day after an ISO date. All-day events end the morning after their last day. */
+export function nextDay(date: string) {
   const d = new Date(`${date}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)

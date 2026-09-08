@@ -4,13 +4,8 @@ import type { Dispatch } from 'react'
 import type { Action, Course } from '@/lib/store'
 import type { ExtractedEvent } from '@/lib/extract'
 import { isComplete } from '@/lib/export'
-import { Trash, X } from './icons'
-
-/** A range's last day, written the short way: the row already shows the year on the start date. */
-function dayLabel(iso: string) {
-  const [, m, d] = iso.split('-')
-  return `${Number(m)}/${Number(d)}`
-}
+import { nextDay } from '@/lib/ics'
+import { Plus, Trash, X } from './icons'
 
 export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?: ExtractedEvent[]; dispatch: Dispatch<Action> }) {
   const list = rows ?? course.events
@@ -46,15 +41,42 @@ export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?:
                 </td>
                 <td className="cell-date px-2 py-1.5 align-top">
                   <input type="date" value={e.date} onChange={(ev) => update({ date: ev.target.value })} className="field py-1" aria-label="Date" />
-                  {e.endDate && (
-                    <button
-                      type="button"
-                      onClick={() => update({ endDate: undefined })}
-                      className="pill mt-1 hover:text-fg"
-                      aria-label={`This runs to ${e.endDate}. Make it one day.`}
-                    >
-                      to {dayLabel(e.endDate)} <X size={11} />
-                    </button>
+                  {/* A range is editable wherever it came from. Extraction finds "Oct 20-21" on
+                      its own, but a student recovering that line from the read report, or adding
+                      a break by hand, arrives with a single day and used to have no way to
+                      widen it. The end date starts the day after the start, which is what
+                      asking for a range means, and DTEND is computed from it either way. */}
+                  {e.endDate ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <span className="shrink-0 text-xs text-muted">to</span>
+                      <input
+                        type="date"
+                        value={e.endDate}
+                        min={e.date || undefined}
+                        onChange={(ev) => update({ endDate: ev.target.value || undefined })}
+                        className="field py-1"
+                        aria-label="Last day"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => update({ endDate: undefined })}
+                        className="icon-btn shrink-0"
+                        aria-label={`This runs to ${e.endDate}. Make it one day.`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ) : (
+                    e.date !== '' && (
+                      <button
+                        type="button"
+                        onClick={() => update({ endDate: nextDay(e.date) })}
+                        className="pill mt-1 hover:text-fg"
+                        aria-label={`Make ${e.title || 'this row'} run over more than one day`}
+                      >
+                        <Plus size={11} /> end date
+                      </button>
+                    )
                   )}
                 </td>
                 <td className="cell-time px-2 py-1.5 align-top">

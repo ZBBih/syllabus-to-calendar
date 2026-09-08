@@ -148,3 +148,30 @@ describe('ExportStep', () => {
     expect(screen.getByText(/psyc-200\.ics is in your downloads/i)).toBeTruthy()
   })
 })
+
+describe('ExportStep per-class menu', () => {
+  const open = () => fireEvent.click(screen.getByRole('button', { name: /just one class/i }))
+  const isOpen = () => screen.getByRole('button', { name: /just one class/i }).getAttribute('aria-expanded') === 'true'
+
+  it('closes on Escape', () => {
+    render(<ExportStep state={base} dispatch={() => {}} />)
+    open()
+    expect(isOpen()).toBe(true)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(isOpen()).toBe(false)
+  })
+
+  it('closes when something outside it is tapped, which is the only route on a phone', () => {
+    render(<ExportStep state={base} dispatch={() => {}} />)
+    open()
+    fireEvent.pointerDown(document.body)
+    expect(isOpen()).toBe(false)
+  })
+
+  it('stays open while the pointer is inside it, so picking a class still works', () => {
+    render(<ExportStep state={base} dispatch={() => {}} />)
+    open()
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'ECON 101' }))
+    expect(isOpen()).toBe(true)
+  })
+})

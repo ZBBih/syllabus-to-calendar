@@ -45,7 +45,6 @@ export type Action =
   | { type: 'setTerm'; id: string; term: Term }
   | { type: 'setEvents'; id: string; events: ExtractedEvent[] }
   | { type: 'mergeEvents'; id: string; events: ExtractedEvent[] }
-  | { type: 'extractAll' }
   | { type: 'addFromFiles'; files: { name: string; text: string; viaPhoto?: boolean }[] }
   | { type: 'updateEvent'; courseId: string; eventId: string; patch: Partial<ExtractedEvent> }
   | { type: 'addEvent'; courseId: string; preset?: { date: string; title: string; source?: string } }
@@ -138,8 +137,6 @@ export function reducer(state: State, action: Action): State {
       })
     case 'setMeetingIncluded':
       return mapCourse(state, action.courseId, (c) => ({ ...c, meetingIncluded: action.include }))
-    case 'extractAll':
-      return { ...state, courses: state.courses.map((c) => (c.text.trim() ? reread(c, c.text) : c)) }
     case 'addFromFiles': {
       const courses = [...state.courses]
       let first = true

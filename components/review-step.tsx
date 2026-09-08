@@ -5,7 +5,7 @@ import type { Action, Course, State } from '@/lib/store'
 import { isComplete } from '@/lib/export'
 import { diffCount } from '@/lib/merge'
 import { ReviewTable } from './review-table'
-import { DatePreview } from './date-preview'
+import { DatePreview, previewRows } from './date-preview'
 import { PasteSheet } from './paste-sheet'
 import { ReadReport } from './read-report'
 import { ChangeSummary } from './change-summary'
@@ -18,7 +18,10 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
   const [needsCheck, setNeedsCheck] = useState(false)
   const [editing, setEditing] = useState<Course | null>(null)
   const [reading, setReading] = useState<Course | null>(null)
-  const [showAll, setShowAll] = useState(false)
+  // The export screen warns that some days have two or more things due; the list that shows
+  // which days those are opens by default when there is actually a clash to look at.
+  const clashes = previewRows(state.courses).filter((r) => r.clash).length
+  const [showAll, setShowAll] = useState(clashes > 0)
 
   if (!active) {
     return (
@@ -31,8 +34,12 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
     )
   }
 
-  const low = active.events.filter((e) => e.confidence === 'low')
-  const rows = needsCheck ? low : active.events
+  // Checking amber rows is the one job repeated once per class in a single sitting, so the
+  // filter reaches across every class rather than the active one. A student with six syllabi
+  // fixes one list instead of selecting each tab in turn to hunt for what is left.
+  const needsFixing = (e: (typeof active.events)[number]) => e.confidence === 'low' || !isComplete(e) || e.missing === true
+  const queue = courses.map((c) => ({ course: c, rows: c.events.filter(needsFixing) })).filter((g) => g.rows.length > 0)
+  const queueTotal = queue.reduce((n, g) => n + g.rows.length, 0)
   const included = active.events.filter((e) => e.include !== false && isComplete(e)).length
   const incomplete = active.events.filter((e) => !isComplete(e)).length
 
@@ -59,7 +66,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
       {courses.length > 1 && (
         <div role="tablist" aria-label="Classes" className="mt-6 flex gap-1.5 overflow-x-auto pb-1">
           {courses.map((c) => {
-            const n = c.events.filter((e) => e.confidence === 'low').length
+            const n = c.events.filter(needsFixing).length
             const changes = diffCount(c.diff)
             const on = c.id === active.id
             return (
@@ -110,11 +117,11 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
           <button
             type="button"
             aria-pressed={needsCheck}
-            disabled={low.length === 0 && !needsCheck}
+            disabled={queueTotal === 0 && !needsCheck}
             onClick={() => setNeedsCheck((v) => !v)}
             className={`btn btn-sm ${needsCheck ? 'btn-primary' : 'btn-secondary'}`}
           >
-            Needs check {low.length > 0 && `(${low.length})`}
+            Needs check {queueTotal > 0 && `(${queueTotal})`}
           </button>
           <button type="button" onClick={() => dispatch({ type: 'addEvent', courseId: active.id })} className="btn btn-secondary btn-sm">
             <Plus size={13} /> Row
@@ -128,7 +135,26 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
             </button>
           )}
         </div>
-        <ReviewTable course={active} rows={rows} dispatch={dispatch} />
+        {needsCheck ? (
+          queue.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">Nothing left to check. Every row has a date and a title, and none of them are in doubt.</p>
+          ) : (
+            <div className="space-y-4">
+              {queue.map((g) => (
+                <div key={g.course.id}>
+                  {courses.length > 1 && (
+                    <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                      {g.course.name.trim() || 'Unnamed class'} <span className="pill pill-warn ml-1">{g.rows.length}</span>
+                    </h3>
+                  )}
+                  <ReviewTable course={g.course} rows={g.rows} dispatch={dispatch} />
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          <ReviewTable course={active} rows={active.events} dispatch={dispatch} />
+        )}
       </div>
 
       <GradePanel course={active} dispatch={dispatch} />
@@ -137,6 +163,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
         <div className="mt-4">
           <button type="button" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll} className="btn btn-ghost btn-sm">
             <Chevron open={showAll} size={13} /> All classes by date
+            {clashes > 0 && <span className="pill pill-warn ml-2">{clashes} share a day</span>}
           </button>
           {showAll && (
             <div className="mt-2">

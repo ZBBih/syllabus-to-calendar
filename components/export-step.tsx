@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useSyncExternalStore, type Dispatch } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch } from 'react'
 import { REMINDERS, type Reminder } from '@/lib/ics'
 import type { Action, State } from '@/lib/store'
 import { exportable, exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
@@ -69,6 +69,24 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const [shared, setShared] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(0)
   const canShare = useSyncExternalStore(noop, canShareFiles, () => false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // This is the last screen before a student leaves, so a menu that cannot be put away is the
+  // final impression the app makes. Escape closes it, matching the paste sheet and the read
+  // report, and so does a tap anywhere outside it — the phone half of the audience has no key.
+  useEffect(() => {
+    if (!menu) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
+    const onDown = (e: Event) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenu(false)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pointerdown', onDown)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pointerdown', onDown)
+    }
+  }, [menu])
 
   const courses = exportableCourses(state.courses)
   const plan = planForAll(courses, state)
@@ -285,7 +303,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
             </select>
           </label>
 
-          <div className={`relative ml-auto ${courses.length < 2 ? 'hidden' : ''}`}>
+          <div ref={menuRef} className={`relative ml-auto ${courses.length < 2 ? 'hidden' : ''}`}>
             <button type="button" disabled={!ready} onClick={() => setMenu((v) => !v)} aria-expanded={menu} className="btn btn-secondary btn-sm">
               Just one class
             </button>

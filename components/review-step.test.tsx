@@ -83,3 +83,74 @@ describe('ReviewStep selection controls', () => {
     expect((screen.getByRole('button', { name: /needs check/i }) as HTMLButtonElement).disabled).toBe(true)
   })
 })
+
+describe('ReviewStep cross-class queue', () => {
+  // Two classes, each holding one row that wants attention: an uncertain date in the first and
+  // a row with no title in the second. Checking them is the job repeated once per class in the
+  // one sitting a student does this, so the filter has to reach past the active tab.
+  const two: State = {
+    ...state,
+    courses: [
+      state.courses[0],
+      {
+        id: 'c2',
+        name: 'CHEM 120',
+        term: { season: 'Fall', year: 2026 },
+        text: 'x',
+        extracted: true,
+        events: [
+          { id: 'c', date: '2026-09-16', title: 'Lab report', confidence: 'high', include: true },
+          { id: 'd', date: '2026-09-30', title: '', confidence: 'high', include: true },
+        ],
+      },
+    ],
+  }
+
+  it('counts every class, not just the one on screen', () => {
+    render(<ReviewStep state={two} dispatch={() => {}} />)
+    expect(screen.getByRole('button', { name: /needs check \(2\)/i })).toBeTruthy()
+  })
+
+  it('shows the rows needing a check from every class at once, under their class names', () => {
+    render(<ReviewStep state={two} dispatch={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /needs check/i }))
+
+    // The uncertain row from the active class and the untitled row from the other one are both
+    // here; the two confident rows are not.
+    expect(screen.getByDisplayValue('Essay')).toBeTruthy()
+    expect(screen.queryByDisplayValue('Quiz')).toBeNull()
+    expect(screen.queryByDisplayValue('Lab report')).toBeNull()
+    expect(screen.getAllByLabelText('Date').map((i) => (i as HTMLInputElement).value)).toEqual(['2026-09-21', '2026-09-30'])
+
+    // Each group is labelled, so a row fixed in the list is still attributable to a class.
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['ECON 101 1', 'CHEM 120 1'])
+  })
+
+  it('edits from the queue are dispatched against the class the row belongs to', () => {
+    const dispatch = vi.fn()
+    render(<ReviewStep state={two} dispatch={dispatch} />)
+    fireEvent.click(screen.getByRole('button', { name: /needs check/i }))
+
+    const titles = screen.getAllByLabelText('Title')
+    fireEvent.change(titles[1], { target: { value: 'Midterm' } })
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ courseId: 'c2', eventId: 'd' }))
+  })
+
+  it('says so once the last row is fixed, rather than showing a blank table', () => {
+    const { rerender } = render(<ReviewStep state={two} dispatch={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /needs check/i }))
+    expect(screen.queryByText(/nothing left to check/i)).toBeNull()
+
+    // The student fixes both rows while the filter is still up: the list empties under them,
+    // and an empty table would read as the app having lost their work.
+    const fixed: State = {
+      ...two,
+      courses: two.courses.map((c) => ({
+        ...c,
+        events: c.events.map((e) => ({ ...e, title: e.title || 'Midterm', confidence: 'high' as const })),
+      })),
+    }
+    rerender(<ReviewStep state={fixed} dispatch={() => {}} />)
+    expect(screen.getByText(/nothing left to check/i)).toBeTruthy()
+  })
+})

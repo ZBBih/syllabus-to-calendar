@@ -54,21 +54,23 @@ describe('store: files and re-runs', () => {
   it('mergeEvents keeps edits on re-run', () => {
     let s = withText(initialState(), 'Sept 14: Quiz 1')
     const id = s.courses[0].id
-    s = reducer(s, { type: 'extractAll' })
+    const reread = (st: State) => reducer(st, { type: 'mergeEvents', id, events: extractEvents(st.courses[0].text, fall) })
+    s = reread(s)
     const evId = s.courses[0].events[0].id
     s = reducer(s, { type: 'updateEvent', courseId: id, eventId: evId, patch: { title: 'Quiz 1 (edited)', include: false } })
     s = withText(s, 'Sept 14: Quiz 1\nOct 2: Paper')
-    s = reducer(s, { type: 'extractAll' })
+    s = reread(s)
     expect(s.courses[0].events).toHaveLength(2)
     expect(s.courses[0].events[0]).toMatchObject({ id: evId, title: 'Quiz 1 (edited)', include: false })
   })
 
-  it('extractAll skips courses with no text', () => {
-    let s = reducer(initialState(), { type: 'add' })
-    s = withText(s, 'Sept 14: Quiz 1')
-    s = reducer(s, { type: 'extractAll' })
-    expect(s.courses[0].extracted).toBe(true)
-    expect(s.courses[1].extracted).toBe(false)
+  it('changing the term of a class with no syllabus yet just moves the term', () => {
+    // Re-reading is what a term change is for, and there is nothing to re-read here. The course
+    // has to come back with the new term and still be marked unextracted, or the upload screen
+    // would claim a blank class had been read.
+    const blank = initialState()
+    const s = reducer(blank, { type: 'setTerm', id: blank.courses[0].id, term: fall })
+    expect(s.courses[0].extracted).toBe(false)
   })
 })
 
