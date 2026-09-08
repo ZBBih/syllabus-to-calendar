@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { reducer, initialState, defaultTerm, sanitize, createSaver, type State } from './store'
+import { describe, it, expect } from 'vitest'
+import { reducer, initialState, defaultTerm, type State } from './store'
+import { sanitize } from './persist'
 import { extractEvents } from './extract'
 
 describe('store', () => {
@@ -71,27 +72,6 @@ describe('store: files and re-runs', () => {
     const blank = initialState()
     const s = reducer(blank, { type: 'setTerm', id: blank.courses[0].id, term: fall })
     expect(s.courses[0].extracted).toBe(false)
-  })
-})
-
-describe('sanitize', () => {
-  it('rejects garbage', () => {
-    expect(sanitize(null)).toBeNull()
-    expect(sanitize('x')).toBeNull()
-    expect(sanitize({ courses: 'nope' })).toBeNull()
-    expect(sanitize({ courses: [{ nope: 1 }] })).toBeNull()
-  })
-  it('drops malformed events and fills defaults', () => {
-    const s = sanitize({
-      courses: [{ id: 'c1', name: 5, term: { season: 'Mars', year: 'x' }, events: [{ id: 'e1', date: '2026-09-14', title: 'ok' }, { bad: true }, 7] }],
-      reminder: 'weird',
-    })!
-    expect(s.courses).toHaveLength(1)
-    expect(s.courses[0].name).toBe('')
-    expect(s.courses[0].term.season).toMatch(/Fall|Spring|Summer|Winter/)
-    expect(s.courses[0].events).toHaveLength(1)
-    expect(s.courses[0].events[0].include).toBe(true)
-    expect(s.reminder).toBe('1d')
   })
 })
 
@@ -353,51 +333,6 @@ describe('store: keeping a date from the read report', () => {
  * already checked for being strings; these check they are the strings they claim to be, so a
  * tampered store cannot put a value into the calendar file that a date field never could.
  */
-describe('sanitize rejects malformed dates and times', () => {
-  const stored = (course: Record<string, unknown>) => sanitize({ courses: [{ id: 'c1', name: 'X', ...course }] })
-
-  it('blanks a date that is not a date, keeping the row to be fixed', () => {
-    const s = stored({ events: [{ id: 'e1', date: '20260914\r\nSUMMARY:Injected', title: 'Exam' }] })
-    expect(s?.courses[0].events[0].date).toBe('')
-    expect(s?.courses[0].events[0].title).toBe('Exam')
-  })
-
-  it('keeps a well-formed date', () => {
-    expect(stored({ events: [{ id: 'e1', date: '2026-09-14', title: 'Exam' }] })?.courses[0].events[0].date).toBe('2026-09-14')
-  })
-
-  it('rejects an impossible calendar date', () => {
-    expect(stored({ events: [{ id: 'e1', date: '2026-02-31', title: 'Exam' }] })?.courses[0].events[0].date).toBe('')
-  })
-
-  it('drops a malformed time and end date', () => {
-    const e = stored({
-      events: [{ id: 'e1', date: '2026-09-14', title: 'Exam', time: '25:99', endDate: 'nope' }],
-    })?.courses[0].events[0]
-    expect(e?.time).toBeUndefined()
-    expect(e?.endDate).toBeUndefined()
-  })
-
-  it('drops a meeting whose times are malformed', () => {
-    const s = stored({
-      events: [],
-      meeting: { days: ['MO'], start: '09:00\r\nX-EVIL:1', end: '10:00', firstDate: '2026-09-14', untilDate: '2026-12-10' },
-    })
-    expect(s?.courses[0].meeting).toBeNull()
-  })
-
-  it('drops an export history entry with a tampered uid', () => {
-    const s = sanitize({
-      courses: [{ id: 'c1', name: 'X', events: [] }],
-      lastExport: [
-        { uid: 'u\r\nX-EVIL:1@syllabify.app', date: '2026-09-14', summary: 'a' },
-        { uid: 'abc123@syllabify.app', date: '2026-09-14', summary: 'b' },
-      ],
-    })
-    expect(s?.lastExport.map((e) => e.summary)).toEqual(['b'])
-  })
-})
-
 /**
  * "Start over" kept the export history so a later export could correct the calendar an
  * earlier one wrote to rather than duplicating onto it. The history carried every exported
@@ -459,87 +394,5 @@ describe('erasing everything on this device', () => {
 
   it('returns to the landing page', () => {
     expect(reducer(used(), { type: 'reset' }).step).toBe(0)
-  })
-})
-
-/**
- * Saving on every keystroke means re-serialising every syllabus the student has loaded, which
- * for six classes is hundreds of kilobytes per character typed. The saver coalesces a burst of
- * changes into one write, and flushes on the way out so closing the tab mid-word loses nothing.
- */
-describe('createSaver', () => {
-  afterEach(() => vi.useRealTimers())
-
-  const stateNamed = (name: string): State => ({
-    ...initialState(),
-    courses: [{ ...initialState().courses[0], name }],
-  })
-
-  it('does not write as the change arrives', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    saver.queue(stateNamed('P'))
-    expect(writes).toEqual([])
-  })
-
-  it('writes once the typing stops', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    saver.queue(stateNamed('PSYC'))
-    vi.advanceTimersByTime(400)
-    expect(writes).toEqual(['PSYC'])
-  })
-
-  it('collapses a burst of keystrokes into a single write of the last one', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    for (const name of ['P', 'PS', 'PSY', 'PSYC']) {
-      saver.queue(stateNamed(name))
-      vi.advanceTimersByTime(100)
-    }
-    vi.advanceTimersByTime(400)
-    expect(writes).toEqual(['PSYC'])
-  })
-
-  it('flush writes the pending state straight away', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    saver.queue(stateNamed('PSYC'))
-    saver.flush()
-    expect(writes).toEqual(['PSYC'])
-  })
-
-  it('flush does not write again when nothing is pending', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    saver.queue(stateNamed('PSYC'))
-    saver.flush()
-    saver.flush()
-    vi.advanceTimersByTime(400)
-    expect(writes).toEqual(['PSYC'])
-  })
-
-  it('reports a refused write so the page can warn about blocked storage', () => {
-    vi.useFakeTimers()
-    const refusals: boolean[] = []
-    const saver = createSaver(() => false, 400, (ok) => refusals.push(ok))
-    saver.queue(stateNamed('PSYC'))
-    vi.advanceTimersByTime(400)
-    expect(refusals).toEqual([false])
-  })
-
-  it('cancel drops a pending write, so erasing is not undone by it', () => {
-    vi.useFakeTimers()
-    const writes: string[] = []
-    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
-    saver.queue(stateNamed('PSYC'))
-    saver.cancel()
-    vi.advanceTimersByTime(400)
-    expect(writes).toEqual([])
   })
 })

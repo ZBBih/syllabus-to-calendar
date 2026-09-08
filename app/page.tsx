@@ -10,7 +10,8 @@ import { ReviewStep } from '@/components/review-step'
 import { ExportStep } from '@/components/export-step'
 import { SwRegister } from '@/components/sw-register'
 import { SocialLinks, SupportLink } from '@/components/site-links'
-import { createSaver, initialState, load, reducer, save, STORAGE_KEY, type Step } from '@/lib/store'
+import { initialState, reducer, type Step } from '@/lib/store'
+import { createSaver, load, save, STORAGE_KEY } from '@/lib/persist'
 
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState)

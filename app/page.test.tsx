@@ -3,7 +3,8 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { StrictMode } from 'react'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import Home from './page'
-import { STORAGE_KEY, type State } from '@/lib/store'
+import { type State } from '@/lib/store'
+import { STORAGE_KEY } from '@/lib/persist'
 
 // jsdom ships no matchMedia, and the theme control reads it on first render.
 window.matchMedia = ((q: string) => ({
