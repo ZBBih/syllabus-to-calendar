@@ -105,8 +105,23 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
       <div className="card mt-4 p-4 sm:p-5">
         <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
           <span className="mr-auto text-sm text-muted">
-            {active.events.length} event{active.events.length === 1 ? '' : 's'}, {included} will export
-            {incomplete > 0 && <span className="pill pill-warn ml-2">{incomplete} need a date and title</span>}
+            {/* While the queue is up the list is not the active class, so the count must not
+                claim to describe it. */}
+            {needsCheck ? (
+              queueTotal === 0 ? (
+                'Nothing left to check'
+              ) : (
+                <>
+                  {queueTotal} row{queueTotal === 1 ? '' : 's'} to check
+                  {queue.length > 1 && ` across ${queue.length} classes`}
+                </>
+              )
+            ) : (
+              <>
+                {active.events.length} event{active.events.length === 1 ? '' : 's'}, {included} will export
+                {incomplete > 0 && <span className="pill pill-warn ml-2">{incomplete} need a date and title</span>}
+              </>
+            )}
           </span>
           <button type="button" aria-pressed={allLit} onClick={() => selectAll(true)} className={`btn btn-sm ${allLit ? 'btn-primary' : 'btn-secondary'}`}>
             All
@@ -137,7 +152,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
         </div>
         {needsCheck ? (
           queue.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">Nothing left to check. Every row has a date and a title, and none of them are in doubt.</p>
+            <p className="py-6 text-center text-sm text-muted">Every row has a date and a title, and none of them are in doubt.</p>
           ) : (
             <div className="space-y-4">
               {queue.map((g) => (

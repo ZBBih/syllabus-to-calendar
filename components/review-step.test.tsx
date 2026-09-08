@@ -106,6 +106,14 @@ describe('ReviewStep cross-class queue', () => {
     ],
   }
 
+  it('stops claiming to describe the active class while the queue is up', () => {
+    render(<ReviewStep state={two} dispatch={() => {}} />)
+    expect(screen.getByText(/2 events, 2 will export/i)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /needs check/i }))
+    expect(screen.queryByText(/2 events, 2 will export/i)).toBeNull()
+    expect(screen.getByText(/2 rows to check across 2 classes/i)).toBeTruthy()
+  })
+
   it('counts every class, not just the one on screen', () => {
     render(<ReviewStep state={two} dispatch={() => {}} />)
     expect(screen.getByRole('button', { name: /needs check \(2\)/i })).toBeTruthy()
@@ -152,5 +160,6 @@ describe('ReviewStep cross-class queue', () => {
     }
     rerender(<ReviewStep state={fixed} dispatch={() => {}} />)
     expect(screen.getByText(/nothing left to check/i)).toBeTruthy()
+    expect(screen.getByText(/none of them are in doubt/i)).toBeTruthy()
   })
 })
