@@ -345,3 +345,53 @@ describe('store: keeping a date from the read report', () => {
   })
 })
 
+
+/**
+ * Restored site data is the one input to this app that no person typed. The event shapes were
+ * already checked for being strings; these check they are the strings they claim to be, so a
+ * tampered store cannot put a value into the calendar file that a date field never could.
+ */
+describe('sanitize rejects malformed dates and times', () => {
+  const stored = (course: Record<string, unknown>) => sanitize({ courses: [{ id: 'c1', name: 'X', ...course }] })
+
+  it('blanks a date that is not a date, keeping the row to be fixed', () => {
+    const s = stored({ events: [{ id: 'e1', date: '20260914\r\nSUMMARY:Injected', title: 'Exam' }] })
+    expect(s?.courses[0].events[0].date).toBe('')
+    expect(s?.courses[0].events[0].title).toBe('Exam')
+  })
+
+  it('keeps a well-formed date', () => {
+    expect(stored({ events: [{ id: 'e1', date: '2026-09-14', title: 'Exam' }] })?.courses[0].events[0].date).toBe('2026-09-14')
+  })
+
+  it('rejects an impossible calendar date', () => {
+    expect(stored({ events: [{ id: 'e1', date: '2026-02-31', title: 'Exam' }] })?.courses[0].events[0].date).toBe('')
+  })
+
+  it('drops a malformed time and end date', () => {
+    const e = stored({
+      events: [{ id: 'e1', date: '2026-09-14', title: 'Exam', time: '25:99', endDate: 'nope' }],
+    })?.courses[0].events[0]
+    expect(e?.time).toBeUndefined()
+    expect(e?.endDate).toBeUndefined()
+  })
+
+  it('drops a meeting whose times are malformed', () => {
+    const s = stored({
+      events: [],
+      meeting: { days: ['MO'], start: '09:00\r\nX-EVIL:1', end: '10:00', firstDate: '2026-09-14', untilDate: '2026-12-10' },
+    })
+    expect(s?.courses[0].meeting).toBeNull()
+  })
+
+  it('drops an export history entry with a tampered uid', () => {
+    const s = sanitize({
+      courses: [{ id: 'c1', name: 'X', events: [] }],
+      lastExport: [
+        { uid: 'u\r\nX-EVIL:1@syllabify.app', date: '2026-09-14', summary: 'a' },
+        { uid: 'abc123@syllabify.app', date: '2026-09-14', summary: 'b' },
+      ],
+    })
+    expect(s?.lastExport.map((e) => e.summary)).toEqual(['b'])
+  })
+})

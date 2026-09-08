@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type Dispatch } from 'react'
 import { createPortal } from 'react-dom'
 import { extractEvents, SEASONS, type Season, type Term } from '@/lib/extract'
 import { defaultTerm, type Action, type Course } from '@/lib/store'
+import { MAX_TEXT_CHARS } from '@/lib/convert'
 import { FileDrop } from './file-drop'
 import { X } from './icons'
 import { nameFromFileName, nameFromText } from '@/lib/course-name'
@@ -126,6 +127,9 @@ export function PasteSheet({ course, dispatch, onClose }: { course: Course | nul
             value={text}
             onChange={(e) => readFromText(e.target.value)}
             rows={10}
+            // The same ceiling the file paths enforce. A paste this long is a textbook, and the
+            // date scanner walks every line of it on each keystroke.
+            maxLength={MAX_TEXT_CHARS}
             placeholder="Paste the syllabus here. The schedule section is all it needs, though the grading table is worth including too."
             className="field font-mono text-xs"
           />

@@ -83,7 +83,61 @@ function trigger(r: Reminder, time: string | undefined): string | null {
 }
 
 export function escapeIcs(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n')
+  return (
+    s
+      // Control characters go before the escaping rather than after it. A property value is
+      // written into its line raw, so a stray carriage return or NUL ends the line early and
+      // whatever followed it is read by the calendar app as a property of its own.
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/;/g, '\\;')
+      .replace(/,/g, '\\,')
+      .replace(/\r\n|\r|\n/g, '\\n')
+  )
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+const HH_MM = /^\d{2}:\d{2}$/
+
+/**
+ * Whether a value is shaped like the date this builder will write into a line.
+ *
+ * Escaping protects the text fields, but the dates and times are spliced in unescaped — a date
+ * only ever has hyphens taken out of it. Restored site data reaches the builder having been
+ * checked for being a string and nothing more, so the shape is checked here, at the point the
+ * value becomes part of the file.
+ */
+export function isIsoDate(s: unknown): s is string {
+  if (typeof s !== 'string' || !ISO_DATE.test(s)) return false
+  // Round-trip rather than Date.parse, which rolls 2026-02-31 forward to March instead of
+  // rejecting it. A date the calendar would silently move is not a date this app wrote.
+  const d = new Date(`${s}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s
+}
+
+export function isHhMm(s: unknown): s is string {
+  if (typeof s !== 'string' || !HH_MM.test(s)) return false
+  const [h, m] = s.split(':').map(Number)
+  return h < 24 && m < 60
+}
+
+/** UIDs are hashes this app mints itself; anything else in that field arrived by tampering. */
+export function isSafeUid(s: string): boolean {
+  return /^[A-Za-z0-9._@-]{1,255}$/.test(s)
+}
+
+const WEEKDAYS = new Set<Weekday>(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])
+
+/** A meeting complete and well-formed enough to become a recurring event. */
+export function usableMeeting(m: Meeting | null | undefined): m is Meeting {
+  if (!m || !Array.isArray(m.days) || m.days.length === 0) return false
+  if (!m.days.every((d) => WEEKDAYS.has(d))) return false
+  return isIsoDate(m.firstDate) && isIsoDate(m.untilDate) && isHhMm(m.start) && isHhMm(m.end)
+}
+
+/** A row complete and well-formed enough to become a calendar entry. */
+export function usableEvent(ev: CalendarEvent): boolean {
+  return ev.include !== false && isIsoDate(ev.date)
 }
 
 /** Fold at 75 octets per RFC 5545 §3.1. */
@@ -146,10 +200,10 @@ export function exportedEntries(courses: CourseEvents[]): ExportedEntry[] {
   const out: ExportedEntry[] = []
   for (const course of courses) {
     for (const ev of course.events) {
-      if (ev.include === false) continue
+      if (!usableEvent(ev)) continue
       out.push({ uid: eventUid(course.name, ev), date: ev.date, summary: summaryFor(course.name, ev.title) })
     }
-    if (course.meeting && course.meeting.days.length > 0) {
+    if (usableMeeting(course.meeting)) {
       out.push({ uid: meetingUid(course.name), date: course.meeting.firstDate, summary: course.name })
     }
   }
@@ -168,25 +222,29 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
   const now = stamp()
   for (const course of courses) {
     for (const ev of course.events) {
-      if (ev.include === false) continue
+      if (!usableEvent(ev)) continue
+      // A malformed time loses only the time: the row still reaches the calendar as an all-day
+      // entry, which beats dropping a deadline over a field the student never typed.
+      const time = isHhMm(ev.time) ? ev.time : undefined
+      const endDate = isIsoDate(ev.endDate) ? ev.endDate : undefined
       const summary = summaryFor(course.name, ev.title)
       lines.push('BEGIN:VEVENT')
       lines.push(`UID:${eventUid(course.name, ev)}`)
       lines.push(`DTSTAMP:${now}`)
       lines.push(`LAST-MODIFIED:${now}`)
       lines.push(`SEQUENCE:${seq}`)
-      if (ev.time) {
-        const end = plusHour(ev.date, ev.time)
-        lines.push(`DTSTART:${compact(ev.date)}T${ev.time.replace(':', '')}00`)
+      if (time) {
+        const end = plusHour(ev.date, time)
+        lines.push(`DTSTART:${compact(ev.date)}T${time.replace(':', '')}00`)
         lines.push(`DTEND:${compact(end.date)}T${end.time}`)
       } else {
         lines.push(`DTSTART;VALUE=DATE:${compact(ev.date)}`)
         // An all-day DTEND is exclusive, so a range ends the day after its last day.
-        lines.push(`DTEND;VALUE=DATE:${compact(nextDay(ev.endDate ?? ev.date))}`)
+        lines.push(`DTEND;VALUE=DATE:${compact(nextDay(endDate ?? ev.date))}`)
       }
       lines.push(`SUMMARY:${escapeIcs(summary)}`)
       if (ev.source && ev.source.trim() !== ev.title.trim()) lines.push(`DESCRIPTION:${escapeIcs(ev.source.trim())}`)
-      const trig = trigger(reminder, ev.time)
+      const trig = trigger(reminder, time)
       if (trig) {
         lines.push('BEGIN:VALARM')
         lines.push('ACTION:DISPLAY')
@@ -199,7 +257,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
   }
   for (const course of courses) {
     const m = course.meeting
-    if (!m || m.days.length === 0) continue
+    if (!usableMeeting(m)) continue
     lines.push('BEGIN:VEVENT')
     lines.push(`UID:${meetingUid(course.name)}`)
     lines.push(`DTSTAMP:${now}`)
@@ -213,6 +271,7 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
     lines.push('END:VEVENT')
   }
   for (const gone of options.cancelled ?? []) {
+    if (!isSafeUid(gone.uid) || !isIsoDate(gone.date)) continue
     lines.push('BEGIN:VEVENT')
     lines.push(`UID:${gone.uid}`)
     lines.push(`DTSTAMP:${now}`)

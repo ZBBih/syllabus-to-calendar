@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
-import { fileToText, normalizeText, UnsupportedFileError, FileTooLargeError, MAX_BYTES } from './convert'
+import { fileToText, normalizeText, UnsupportedFileError, FileTooLargeError, TextTooLongError, MAX_BYTES, MAX_TEXT_CHARS } from './convert'
 
 describe('normalizeText', () => {
   it('collapses CRLF and blank runs', () => {
@@ -32,5 +32,27 @@ describe('fileToText', () => {
     expect(text).toContain('BIOL 210: Genetics')
     expect(text).toContain('Spring 2027')
     expect(text.split('\n')).toContain('Feb 11 Problem set 1 due at 11:59pm')
+  })
+})
+
+/**
+ * The size limit is a limit on bytes, and bytes are not the thing that hangs the tab. 25 MB of
+ * plain text is 25 million characters going through the date scanner line by line, and a 25 MB
+ * PDF can hold thousands of pages. Neither is a syllabus, and both take the page down with them.
+ */
+describe('limits on how much text can arrive', () => {
+  it('rejects a file whose text is longer than any syllabus', async () => {
+    const f = new File(['a'.repeat(MAX_TEXT_CHARS + 1)], 'reader.txt', { type: 'text/plain' })
+    await expect(fileToText(f)).rejects.toBeInstanceOf(TextTooLongError)
+  })
+
+  it('accepts text right up to the limit', async () => {
+    const f = new File(['a'.repeat(MAX_TEXT_CHARS)], 'long.txt', { type: 'text/plain' })
+    expect((await fileToText(f)).length).toBe(MAX_TEXT_CHARS)
+  })
+
+  it('says how long the text was and what to do about it', async () => {
+    const f = new File(['a'.repeat(MAX_TEXT_CHARS + 1)], 'reader.txt', { type: 'text/plain' })
+    await expect(fileToText(f)).rejects.toThrow(/paste/i)
   })
 })

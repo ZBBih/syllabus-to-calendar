@@ -48,3 +48,6 @@ next-env.d.ts
 
 # Tesseract unpacks the model beside the process when run outside the browser
 /eng.traineddata
+
+# Playwright MCP scratch output; can hold syllabus text from local testing
+.playwright-mcp/

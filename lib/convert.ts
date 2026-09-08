@@ -27,11 +27,45 @@ export const IMAGE_EXTS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', '
 export const ACCEPT = ['.pdf', '.docx', '.txt', '.md', ...IMAGE_EXTS.map((e) => `.${e}`)].join(',')
 export const MAX_BYTES = 25 * 1024 * 1024
 
+/**
+ * Caps on the work, not just on the download.
+ *
+ * The byte limit is not what protects the tab: 25 MB of plain text is 25 million characters for
+ * the date scanner to walk line by line, and a 25 MB PDF can hold thousands of pages, each one
+ * a round trip through the PDF worker. A long syllabus is 30 pages and 60,000 characters, so
+ * these leave an order of magnitude of room and still stop a course reader from freezing the
+ * page with no way back.
+ */
+export const MAX_PAGES = 400
+export const MAX_TEXT_CHARS = 600_000
+
 export class FileTooLargeError extends Error {
   constructor(size: number) {
     super(`That file is ${(size / 1024 / 1024).toFixed(0)} MB. The limit is 25 MB; a syllabus PDF is usually under 5 MB.`)
     this.name = 'FileTooLargeError'
   }
+}
+
+export class TooManyPagesError extends Error {
+  constructor(pages: number) {
+    super(`That PDF is ${pages} pages. The limit is ${MAX_PAGES}; if this is a course reader, upload just the syllabus pages, or paste the schedule.`)
+    this.name = 'TooManyPagesError'
+  }
+}
+
+export class TextTooLongError extends Error {
+  constructor(chars: number) {
+    super(
+      `That file holds ${Math.round(chars / 1000)},000 characters of text. The limit is ${Math.round(MAX_TEXT_CHARS / 1000)},000; a syllabus is a fraction of that. Paste just the schedule instead.`,
+    )
+    this.name = 'TextTooLongError'
+  }
+}
+
+/** Everything that becomes syllabus text goes through here, whatever file it came out of. */
+function checkLength(text: string): string {
+  if (text.length > MAX_TEXT_CHARS) throw new TextTooLongError(text.length)
+  return text
 }
 
 export function normalizeText(s: string): string {
@@ -51,6 +85,7 @@ async function pdfToText(file: File): Promise<string> {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
   const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  if (doc.numPages > MAX_PAGES) throw new TooManyPagesError(doc.numPages)
   const pages: string[] = []
   for (let p = 1; p <= doc.numPages; p++) {
     const page = await doc.getPage(p)
@@ -69,13 +104,13 @@ async function pdfToText(file: File): Promise<string> {
   }
   const text = normalizeText(pages.join('\n\n'))
   if (!text) throw new NoTextLayerError()
-  return text
+  return checkLength(text)
 }
 
 async function docxToText(file: File): Promise<string> {
   const mammoth = await import('mammoth')
   const { value } = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })
-  return normalizeText(value)
+  return checkLength(normalizeText(value))
 }
 
 export type ConvertProgress = (stage: 'reading' | 'scanning', fraction?: number) => void
@@ -87,10 +122,10 @@ export async function fileToText(file: File, onProgress?: ConvertProgress): Prom
   onProgress?.('reading')
   if (isImage(file)) {
     onProgress?.('scanning', 0)
-    return normalizeText(await imageToText(file, (f) => onProgress?.('scanning', f)))
+    return checkLength(normalizeText(await imageToText(file, (f) => onProgress?.('scanning', f))))
   }
   if (ext === 'pdf' || mime === 'application/pdf') return pdfToText(file)
   if (ext === 'docx') return docxToText(file)
-  if (ext === 'txt' || ext === 'md' || mime.startsWith('text/')) return normalizeText(await file.text())
+  if (ext === 'txt' || ext === 'md' || mime.startsWith('text/')) return checkLength(normalizeText(await file.text()))
   throw new UnsupportedFileError(ext)
 }

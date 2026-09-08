@@ -89,3 +89,73 @@ describe('helpers', () => {
   })
   it('foldLine keeps short lines', () => expect(foldLine('short')).toBe('short'))
 })
+
+/**
+ * The .ics file is the one thing this app hands to a system outside itself, so a value that
+ * escapes its own line is the only injection this app can actually suffer. Nothing in the UI
+ * types a carriage return into a date field, but tampered site data and any future import path
+ * both reach the builder, and the file the student then feeds to Google Calendar is not the
+ * place to find out.
+ */
+describe('injection through the calendar file', () => {
+  it('strips a bare carriage return from a summary', () => {
+    const out = buildIcs([{ name: 'X', events: [{ ...base, date: '2026-09-14', title: 'Exam\rSUMMARY:Cancelled' }] }])
+    expect(out).not.toMatch(/\rSUMMARY:Cancelled/)
+    expect(out.split('\r\n').filter((l) => l.startsWith('SUMMARY:'))).toHaveLength(1)
+  })
+
+  it('strips control characters from a description', () => {
+    const out = buildIcs([
+      { name: 'X', events: [{ ...base, date: '2026-09-14', title: 'Essay', source: 'due\x01soon ' }] },
+    ])
+    expect(out).toContain('DESCRIPTION:duesoon')
+  })
+
+  it('drops an event whose date is not a real date', () => {
+    const out = buildIcs([{ name: 'X', events: [{ ...base, date: '20260914\r\nSUMMARY:Injected', title: 'Exam' }] }])
+    expect(out).not.toContain('SUMMARY:Injected')
+    expect(out).not.toContain('BEGIN:VEVENT')
+  })
+
+  it('drops a time that is not a real time rather than emitting it', () => {
+    const out = buildIcs([
+      { name: 'X', events: [{ ...base, date: '2026-09-14', time: '14:00\r\nX-EVIL:1', title: 'Exam' }] },
+    ])
+    expect(out).not.toContain('X-EVIL')
+    // Falls back to the all-day form, so the deadline still reaches the calendar.
+    expect(out).toContain('DTSTART;VALUE=DATE:20260914')
+  })
+
+  it('ignores an end date that is not a real date', () => {
+    const out = buildIcs([
+      { name: 'X', events: [{ ...base, date: '2026-10-20', endDate: 'x\r\nX-EVIL:1', title: 'Break' }] },
+    ])
+    expect(out).not.toContain('X-EVIL')
+    expect(out).toContain('DTEND;VALUE=DATE:20261021')
+  })
+
+  it('drops a weekly meeting with a malformed time', () => {
+    const out = buildIcs([
+      {
+        name: 'X',
+        events: [],
+        meeting: { days: ['MO'], start: '09:00\r\nX-EVIL:1', end: '10:00', firstDate: '2026-09-14', untilDate: '2026-12-10' },
+      },
+    ])
+    expect(out).not.toContain('X-EVIL')
+    expect(out).not.toContain('BEGIN:VEVENT')
+  })
+
+  it('drops a cancellation with a malformed date', () => {
+    const out = buildIcs([], '1d', {
+      cancelled: [{ uid: 'u@syllabify.app', date: '2026\r\nX-EVIL:1', summary: 'Gone' }],
+    })
+    expect(out).not.toContain('X-EVIL')
+    expect(out).not.toContain('BEGIN:VEVENT')
+  })
+
+  it('still cancels a well-formed withdrawal', () => {
+    const out = buildIcs([], '1d', { cancelled: [{ uid: 'u@syllabify.app', date: '2026-09-14', summary: 'Gone' }] })
+    expect(out).toContain('STATUS:CANCELLED')
+  })
+})

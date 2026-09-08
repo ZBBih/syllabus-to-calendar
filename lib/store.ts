@@ -1,6 +1,6 @@
 import { extractEvents, newId, type ExtractedEvent, type Term } from './extract'
 import { mergeWithDiff, EMPTY_DIFF, type EventDiff } from './merge'
-import type { ExportedEntry, Meeting, Reminder } from './ics'
+import { isHhMm, isIsoDate, isSafeUid, usableMeeting, type ExportedEntry, type Meeting, type Reminder } from './ics'
 import { detectMeeting } from './meeting'
 import { extractWeights, mergeWeights, blankWeight, type Weight } from './grades'
 import { looksLikeCode, nameFromText } from './course-name'
@@ -243,10 +243,13 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
   if (!isStr(e.id) || !isStr(e.date) || !isStr(e.title)) return null
   return {
     id: e.id,
-    date: e.date,
-    endDate: isStr(e.endDate) ? e.endDate : undefined,
+    // A date that is not a date becomes a blank one rather than taking the row down with it:
+    // the student keeps the title and the empty field to correct, and nothing malformed can
+    // reach the calendar file in the meantime.
+    date: isIsoDate(e.date) ? e.date : '',
+    endDate: isIsoDate(e.endDate) ? e.endDate : undefined,
     title: e.title,
-    time: isStr(e.time) ? e.time : undefined,
+    time: isHhMm(e.time) ? e.time : undefined,
     confidence: e.confidence === 'low' ? 'low' : 'high',
     reason: isStr(e.reason) ? e.reason : undefined,
     include: e.include !== false,
@@ -282,6 +285,7 @@ function sanitizeEntry(raw: unknown): ExportedEntry | null {
   if (!raw || typeof raw !== 'object') return null
   const e = raw as Record<string, unknown>
   if (!isStr(e.uid) || !isStr(e.date) || !isStr(e.summary)) return null
+  if (!isSafeUid(e.uid) || !isIsoDate(e.date)) return null
   return { uid: e.uid, date: e.date, summary: e.summary }
 }
 
@@ -292,7 +296,17 @@ function sanitizeMeeting(raw: unknown): Meeting | null {
   if (!Array.isArray(m.days) || !isStr(m.start) || !isStr(m.end) || !isStr(m.firstDate) || !isStr(m.untilDate)) return null
   const days = m.days.filter((d): d is Meeting['days'][number] => isStr(d) && DAYS.has(d))
   if (days.length === 0) return null
-  return { days, start: m.start, end: m.end, location: isStr(m.location) ? m.location : undefined, firstDate: m.firstDate, untilDate: m.untilDate }
+  const meeting: Meeting = {
+    days,
+    start: m.start,
+    end: m.end,
+    location: isStr(m.location) ? m.location : undefined,
+    firstDate: m.firstDate,
+    untilDate: m.untilDate,
+  }
+  // A meeting is one recurring event or nothing; there is no half of it worth keeping, so a
+  // malformed time or date drops the whole thing rather than leaving the builder to guess.
+  return usableMeeting(meeting) ? meeting : null
 }
 
 function sanitizeCourse(raw: unknown): Course | null {
