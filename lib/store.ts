@@ -63,6 +63,7 @@ export type Action =
   | { type: 'removeWeight'; courseId: string; weightId: string }
   | { type: 'recordExport'; entries: ExportedEntry[] }
   | { type: 'clear' }
+  | { type: 'reset' }
   | { type: 'hydrate'; state: State }
 
 export const STORAGE_KEY = 'stc:v1'
@@ -226,7 +227,19 @@ export function reducer(state: State, action: Action): State {
     case 'clear':
       // Deliberately keeps the export history: starting over should still update the calendar
       // that the previous run wrote to, rather than duplicating every event onto it.
-      return { ...initialState(), lastExport: state.lastExport, exportSequence: state.exportSequence }
+      //
+      // The titles go, though. A withdrawal is matched by UID alone, so the summary carries
+      // nothing the calendar needs — and a student who starts over on a library machine should
+      // not leave a readable list of what they were studying and when it was due behind them.
+      return {
+        ...initialState(),
+        lastExport: state.lastExport.map((e) => ({ ...e, summary: '' })),
+        exportSequence: state.exportSequence,
+      }
+    case 'reset':
+      // The other kind of starting over: leave nothing at all. This is the one a student on a
+      // shared computer wants, and it gives up the calendar correction to get it.
+      return initialState()
     case 'hydrate':
       return action.state
   }
@@ -369,5 +382,56 @@ export function save(state: State): boolean {
     return true
   } catch {
     return false
+  }
+}
+
+/**
+ * Coalesce a burst of state changes into one write.
+ *
+ * The saved state carries the full text of every syllabus loaded, so writing it on each
+ * dispatch means re-serialising hundreds of kilobytes for every character typed into a class
+ * name or a grade box — the shape of thing that makes typing feel laggy on the lower-end
+ * phones half this audience carries. A trailing timer collapses the burst; `flush` exists so
+ * that closing the tab mid-word still commits, and `cancel` so erasing the device is not undone
+ * a moment later by a write that was already in flight.
+ */
+export function createSaver(
+  write: (state: State) => boolean = save,
+  delay = 400,
+  onResult: (ok: boolean) => void = () => {},
+) {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let pending: State | null = null
+
+  function commit() {
+    if (pending === null) return
+    const state = pending
+    pending = null
+    onResult(write(state))
+  }
+
+  return {
+    queue(state: State) {
+      pending = state
+      if (timer !== null) clearTimeout(timer)
+      timer = setTimeout(() => {
+        timer = null
+        commit()
+      }, delay)
+    },
+    flush() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      commit()
+    },
+    cancel() {
+      if (timer !== null) {
+        clearTimeout(timer)
+        timer = null
+      }
+      pending = null
+    },
   }
 }

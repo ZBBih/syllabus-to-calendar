@@ -159,3 +159,29 @@ describe('injection through the calendar file', () => {
     expect(out).toContain('STATUS:CANCELLED')
   })
 })
+
+/**
+ * A withdrawal whose title has been scrubbed by "Start over" still has to reach the calendar.
+ * RFC 5545 makes SUMMARY optional in a VEVENT, and an empty property value is likelier to trip
+ * a strict parser than an absent property, so the line is left out rather than emitted blank.
+ */
+describe('a cancellation with no title', () => {
+  const gone = { uid: 'a1@syllabify.app', date: '2026-12-09', summary: '' }
+
+  it('still withdraws the event', () => {
+    const out = buildIcs([], '1d', { cancelled: [gone] })
+    expect(out).toContain('UID:a1@syllabify.app')
+    expect(out).toContain('STATUS:CANCELLED')
+    expect(out).toContain('DTSTART;VALUE=DATE:20261209')
+  })
+
+  it('omits the summary line rather than emitting an empty one', () => {
+    const out = buildIcs([], '1d', { cancelled: [gone] })
+    expect(out).not.toContain('SUMMARY:')
+  })
+
+  it('still writes a summary when there is one', () => {
+    const out = buildIcs([], '1d', { cancelled: [{ ...gone, summary: 'ECON 101: Midterm' }] })
+    expect(out).toContain('SUMMARY:ECON 101: Midterm')
+  })
+})

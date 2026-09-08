@@ -10,7 +10,7 @@ import { ReviewStep } from '@/components/review-step'
 import { ExportStep } from '@/components/export-step'
 import { SwRegister } from '@/components/sw-register'
 import { SocialLinks, SupportLink } from '@/components/site-links'
-import { initialState, load, reducer, save, type Step } from '@/lib/store'
+import { createSaver, initialState, load, reducer, save, STORAGE_KEY, type Step } from '@/lib/store'
 
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState)
@@ -20,6 +20,11 @@ export default function Home() {
   // state over everything the browser had kept.
   const skipSave = useRef(false)
   const [storageBlocked, setStorageBlocked] = useState(false)
+  const [confirmErase, setConfirmErase] = useState(false)
+  const [offlineReady, setOfflineReady] = useState(false)
+  // One saver for the life of the page: writing the whole state on every dispatch means
+  // re-serialising every syllabus loaded for each character typed.
+  const [saver] = useState(() => createSaver(save, 400, (ok) => setStorageBlocked(!ok)))
 
   useEffect(() => {
     const saved = load()
@@ -36,8 +41,50 @@ export default function Home() {
       skipSave.current = false
       return
     }
-    setStorageBlocked(!save(state))
-  }, [state])
+    saver.queue(state)
+  }, [state, saver])
+
+  // A debounced write that never lands is worse than no debounce, so anything still pending is
+  // committed when the tab goes away — pagehide rather than unload, which iOS Safari ignores.
+  useEffect(() => {
+    const flush = () => saver.flush()
+    window.addEventListener('pagehide', flush)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      flush()
+    }
+  }, [saver])
+
+  // Only claim the app works offline once the worker is actually in control; before that the
+  // shell and the recogniser may not be cached and the invitation would be a lie.
+  useEffect(() => {
+    const sw = navigator.serviceWorker
+    if (!sw) return
+    const update = () => setOfflineReady(Boolean(sw.controller))
+    update()
+    sw.addEventListener('controllerchange', update)
+    return () => sw.removeEventListener('controllerchange', update)
+  }, [])
+
+  /**
+   * The other kind of starting over.
+   *
+   * "Start over" keeps enough of the export history to correct the calendar it already wrote
+   * to. A student on a library or a borrowed machine wants the opposite, and had no way to ask
+   * for it: the only route was knowing to clear site data in browser settings. Cancelling the
+   * pending write first matters, or a save already in flight lands a moment after the erase.
+   */
+  function eraseEverything() {
+    saver.cancel()
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch {
+      // A browser refusing the removal is the same browser that refused to store anything.
+    }
+    skipSave.current = true
+    dispatch({ type: 'reset' })
+    setConfirmErase(false)
+  }
 
   // Moving between steps should start you at the top of the new screen, not halfway down it.
   useEffect(() => {
@@ -50,6 +97,9 @@ export default function Home() {
   if (state.step === 3) done.add(2)
 
   const onLanding = state.step === 0
+  const hasSavedWork =
+    state.lastExport.length > 0 ||
+    state.courses.some((c) => c.name.trim() !== '' || c.text.trim() !== '' || c.events.length > 0)
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 sm:px-6">
@@ -82,10 +132,33 @@ export default function Home() {
 
       <footer className="mt-20 border-t border-line pt-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <p className="max-w-xl text-sm leading-relaxed text-muted">
-            Everything happens in this browser. Your syllabus, your photos and your grades are read here and never sent to a server, because there is no server
-            to send them to. No account, no class limit, no paid tier.
-          </p>
+          <div className="max-w-xl">
+            <p className="text-sm leading-relaxed text-muted">
+              Everything happens in this browser. Your syllabus, your photos and your grades are read here and never sent to a server, because there is no server
+              to send them to. No account, no class limit, no paid tier.
+            </p>
+            {offlineReady && (
+              <p className="mt-2 text-sm leading-relaxed text-muted">
+                You do not have to take that on faith: turn on airplane mode and use it anyway. It all still works, because it was never talking to anything.
+              </p>
+            )}
+            {hasSavedWork &&
+              (confirmErase ? (
+                <div className="rise mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-sm font-medium">Erase your classes, dates and grades from this browser?</span>
+                  <button type="button" onClick={eraseEverything} className="btn btn-secondary btn-sm">
+                    Yes, erase everything
+                  </button>
+                  <button type="button" onClick={() => setConfirmErase(false)} className="btn btn-ghost btn-sm">
+                    Keep my work
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setConfirmErase(true)} className="btn btn-ghost btn-sm mt-3">
+                  Erase everything on this device
+                </button>
+              ))}
+          </div>
           <div className="flex flex-col items-start gap-3 sm:items-end">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted">Made by Zach Weiss</span>

@@ -279,7 +279,10 @@ export function buildIcs(courses: CourseEvents[], reminder: Reminder = '1d', opt
     lines.push(`SEQUENCE:${seq}`)
     lines.push(`DTSTART;VALUE=DATE:${compact(gone.date)}`)
     lines.push(`DTEND;VALUE=DATE:${compact(nextDay(gone.date))}`)
-    lines.push(`SUMMARY:${escapeIcs(gone.summary)}`)
+    // "Start over" scrubs the titles out of the export history, so a withdrawal can arrive
+    // without one. SUMMARY is optional in a VEVENT, and an absent property sits better with a
+    // strict parser than an empty value, so the line is left out entirely.
+    if (gone.summary) lines.push(`SUMMARY:${escapeIcs(gone.summary)}`)
     lines.push('STATUS:CANCELLED')
     lines.push('END:VEVENT')
   }

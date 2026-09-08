@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { reducer, initialState, defaultTerm, sanitize, type State } from './store'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { reducer, initialState, defaultTerm, sanitize, createSaver, type State } from './store'
 import { extractEvents } from './extract'
 
 describe('store', () => {
@@ -393,5 +393,151 @@ describe('sanitize rejects malformed dates and times', () => {
       ],
     })
     expect(s?.lastExport.map((e) => e.summary)).toEqual(['b'])
+  })
+})
+
+/**
+ * "Start over" kept the export history so a later export could correct the calendar an
+ * earlier one wrote to rather than duplicating onto it. The history carried every exported
+ * assignment title, though, so starting over on a shared machine left a readable list of what
+ * the student was studying and when it was due. Retraction matches on UID alone, so the titles
+ * can go without the calendar behaviour changing.
+ */
+describe('starting over leaves no titles behind', () => {
+  const withHistory = (): State => ({
+    ...initialState(),
+    lastExport: [
+      { uid: 'a1@syllabify.app', date: '2026-12-09', summary: 'PSYC 101: Final paper due' },
+      { uid: 'b2@syllabify.app', date: '2026-10-14', summary: 'PSYC 101: Midterm exam' },
+    ],
+    exportSequence: 3,
+  })
+
+  it('blanks every exported title', () => {
+    const after = reducer(withHistory(), { type: 'clear' })
+    expect(after.lastExport.map((e) => e.summary)).toEqual(['', ''])
+  })
+
+  it('keeps the identity and date each withdrawal needs', () => {
+    const after = reducer(withHistory(), { type: 'clear' })
+    expect(after.lastExport.map((e) => e.uid)).toEqual(['a1@syllabify.app', 'b2@syllabify.app'])
+    expect(after.lastExport.map((e) => e.date)).toEqual(['2026-12-09', '2026-10-14'])
+  })
+
+  it('keeps the export sequence rising so the calendar accepts the correction', () => {
+    expect(reducer(withHistory(), { type: 'clear' }).exportSequence).toBe(3)
+  })
+})
+
+/**
+ * Start over is not erasure: it deliberately keeps enough to correct the calendar. A student
+ * on a library machine needs the other thing, which nothing in the app offered.
+ */
+describe('erasing everything on this device', () => {
+  const used = (): State => ({
+    ...initialState(),
+    courses: [{ ...initialState().courses[0], name: 'PSYC 101', text: 'Final paper due Dec 9' }],
+    lastExport: [{ uid: 'a1@syllabify.app', date: '2026-12-09', summary: 'PSYC 101: Final paper due' }],
+    exportSequence: 3,
+    step: 3,
+  })
+
+  it('leaves no course text behind', () => {
+    const after = reducer(used(), { type: 'reset' })
+    expect(after.courses).toHaveLength(1)
+    expect(after.courses[0].name).toBe('')
+    expect(after.courses[0].text).toBe('')
+  })
+
+  it('forgets the export history entirely, unlike starting over', () => {
+    const after = reducer(used(), { type: 'reset' })
+    expect(after.lastExport).toEqual([])
+    expect(after.exportSequence).toBe(0)
+  })
+
+  it('returns to the landing page', () => {
+    expect(reducer(used(), { type: 'reset' }).step).toBe(0)
+  })
+})
+
+/**
+ * Saving on every keystroke means re-serialising every syllabus the student has loaded, which
+ * for six classes is hundreds of kilobytes per character typed. The saver coalesces a burst of
+ * changes into one write, and flushes on the way out so closing the tab mid-word loses nothing.
+ */
+describe('createSaver', () => {
+  afterEach(() => vi.useRealTimers())
+
+  const stateNamed = (name: string): State => ({
+    ...initialState(),
+    courses: [{ ...initialState().courses[0], name }],
+  })
+
+  it('does not write as the change arrives', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    saver.queue(stateNamed('P'))
+    expect(writes).toEqual([])
+  })
+
+  it('writes once the typing stops', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    saver.queue(stateNamed('PSYC'))
+    vi.advanceTimersByTime(400)
+    expect(writes).toEqual(['PSYC'])
+  })
+
+  it('collapses a burst of keystrokes into a single write of the last one', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    for (const name of ['P', 'PS', 'PSY', 'PSYC']) {
+      saver.queue(stateNamed(name))
+      vi.advanceTimersByTime(100)
+    }
+    vi.advanceTimersByTime(400)
+    expect(writes).toEqual(['PSYC'])
+  })
+
+  it('flush writes the pending state straight away', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    saver.queue(stateNamed('PSYC'))
+    saver.flush()
+    expect(writes).toEqual(['PSYC'])
+  })
+
+  it('flush does not write again when nothing is pending', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    saver.queue(stateNamed('PSYC'))
+    saver.flush()
+    saver.flush()
+    vi.advanceTimersByTime(400)
+    expect(writes).toEqual(['PSYC'])
+  })
+
+  it('reports a refused write so the page can warn about blocked storage', () => {
+    vi.useFakeTimers()
+    const refusals: boolean[] = []
+    const saver = createSaver(() => false, 400, (ok) => refusals.push(ok))
+    saver.queue(stateNamed('PSYC'))
+    vi.advanceTimersByTime(400)
+    expect(refusals).toEqual([false])
+  })
+
+  it('cancel drops a pending write, so erasing is not undone by it', () => {
+    vi.useFakeTimers()
+    const writes: string[] = []
+    const saver = createSaver((s) => (writes.push(s.courses[0].name), true))
+    saver.queue(stateNamed('PSYC'))
+    saver.cancel()
+    vi.advanceTimersByTime(400)
+    expect(writes).toEqual([])
   })
 })
