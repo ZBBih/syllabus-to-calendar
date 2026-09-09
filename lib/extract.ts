@@ -162,10 +162,16 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       confidence = 'low'
       reason = reason ?? 'no title found'
     }
+    // A schedule table whose Notes column holds a page of boilerplate arrives as one line once
+    // the PDF is flattened: a real date cell, then prose. The date is worth keeping and the
+    // title is not, and there is no way to tell from the text which half the student wants —
+    // so the row is offered rather than taken. It stays visible and one tap from included.
+    let prose = false
     if (title.length > TITLE_MAX) {
       title = title.slice(0, TITLE_MAX).replace(/\s+\S*$/, '') + '…'
       confidence = 'low'
       reason = reason ?? 'the line reads as a paragraph, not a schedule row'
+      prose = true
     }
 
     // A time written once on the line belongs to the date on that line, but only when there is
@@ -185,7 +191,7 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       const last = r.end && r.end.isCertain('month') && r.end.isCertain('day') ? r.end.date() : null
       const endDate = last && iso(last) > iso(start) ? iso(last) : undefined
 
-      found.push({ id: newId(), date: iso(start), endDate, time, title, confidence, reason, include: true, origDate: iso(start), origTitle: title, source })
+      found.push({ id: newId(), date: iso(start), endDate, time, title, confidence, reason, include: !prose, origDate: iso(start), origTitle: title, source })
       // A date-only line borrows the next line's title, so the capture belongs to the line the
       // date was on, which is where the student will look for it.
       report[i - (reason === 'date only' ? 1 : 0)].captured.push({ date: iso(start), endDate, time, title })

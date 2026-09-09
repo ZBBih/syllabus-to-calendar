@@ -187,3 +187,30 @@ describe('prose is not a schedule', () => {
     expect(e).toMatchObject({ title: 'Quiz 1 (chapters 1-3)', confidence: 'high' })
   })
 })
+
+/**
+ * The second half of the same real syllabus, reported 2026-09-08 after the duration fix cut it
+ * from 43 rows to 38. The three that remained were schedule-table rows whose Notes column held
+ * a page of boilerplate: PDF text extraction puts the date cell and the notes cell on one line,
+ * so the date is real and the title is not.
+ */
+describe('a row whose title is boilerplate does not export itself', () => {
+  const tableRow =
+    '08/15/2026 9:00 AM Notes: This material is available through first day access if you opt in. You should be able to see the course materials on the right-side panel on Canvas. When you click the Stukent link in Canvas for the first time you will be prompted to type in your proof of purchase.'
+
+  it('keeps the row and its real date, but leaves it unticked', () => {
+    const [e] = extractEvents(tableRow, fall)
+    expect(e.date).toBe('2026-08-15')
+    expect(e.confidence).toBe('low')
+    expect(e.reason).toBe('the line reads as a paragraph, not a schedule row')
+    // Visible, correctable, and one tap from being included — but not on the calendar by
+    // default, because "nothing reaches your calendar until you say so" is the whole promise.
+    expect(e.include).toBe(false)
+  })
+
+  it('leaves every other kind of row ticked, including the ones that only need a look', () => {
+    const rows = extractEvents('Sept 14: Quiz 1\nOct 2\nStrengthen Your Skills: 5', fall)
+    expect(rows.every((e) => e.include !== false)).toBe(true)
+    expect(rows.some((e) => e.reason === 'date only')).toBe(true)
+  })
+})

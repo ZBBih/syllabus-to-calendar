@@ -19,9 +19,9 @@ const GUIDES = {
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone: tap "Add to my calendar" above, then "Save to Files". Open the Files app, tap syllabify.ics, and tap Add All.',
-    'Calendar is not one of the apps in the share sheet, so save the file first rather than looking for it there.',
-    'If the file opens in a note-taking or PDF app instead, that app has claimed .ics files. Press and hold it in Files, choose Share, and pick Calendar — or import it on a Mac, where it always works.',
+    'On iPhone: tap "Add to my calendar" above, then "Save to Files".',
+    'Open the Files app and tap syllabify.ics. If your phone offers to add the events to Calendar, accept it and you are done.',
+    'If you get only a preview of the list with no way to add it, another app on your phone has claimed .ics files — it is the one named on the button at the bottom of that preview. Calendar is not in the share sheet, so there is no way through from the phone. Import on a computer instead and it will sync back.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
     'iCloud syncs it to every Apple device, so importing once on a Mac puts it on your phone too.',
@@ -144,7 +144,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
       succeed(
         withdrawing
           ? 'Save it to Files and open it the same way you imported. Your calendar drops those events.'
-          : 'Choose "Save to Files", then open the file from Files and tap Add All. Calendar is not in the share sheet itself.',
+          : 'Choose "Save to Files", then open the file from Files. Calendar is not in the share sheet itself, so saving it first is the only route.',
       )
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return
