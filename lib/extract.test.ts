@@ -141,3 +141,49 @@ describe('readReport', () => {
   })
 })
 
+
+/**
+ * Reported from a real UCF syllabus on 2026-09-08: 43 events, of which several carried an
+ * entire policy paragraph as their title, dated to the first week of term. Both causes are
+ * here.
+ */
+describe('prose is not a schedule', () => {
+  const policy =
+    'I will not change deadlines. You will get 30% points for delayed submissions up to 3 days. Submissions delayed beyond 3 days will have no points awarded.'
+
+  it('a length of time is not a date, however confident chrono is about it', () => {
+    // "3 days" counted from the term reference lands on a real date with month and day both
+    // marked certain, which is why it got through. Nothing on a syllabus is scheduled as a
+    // bare duration.
+    expect(extractEvents(policy, fall)).toEqual([])
+    expect(extractEvents('Please reply within 24 hours of the announcement.', fall)).toEqual([])
+    expect(extractEvents('You have two weeks to appeal a grade.', fall)).toEqual([])
+  })
+
+  it('says in the read report why the duration was passed over', () => {
+    const [line] = readReport(policy, fall)
+    expect(line.captured).toEqual([])
+    expect(line.skipped.map((s) => s.reason)).toContain('a length of time, not a date')
+  })
+
+  it('still reads a real date out of a sentence that also contains a duration', () => {
+    const [e] = extractEvents('The final is on Dec 10, and regrades close 3 days later.', fall)
+    expect(e).toMatchObject({ date: '2026-12-10' })
+  })
+
+  it('a paragraph that does carry a real date is cut down to a usable title', () => {
+    const long =
+      'Dec 10: the final exam will be held in the testing center and you must bring a photo ID, a pencil and an approved calculator, and you should arrive fifteen minutes early because late entry is not permitted under any circumstances whatsoever.'
+    const [e] = extractEvents(long, fall)
+    expect(e.title.length).toBeLessThanOrEqual(121)
+    expect(e.title.endsWith('…')).toBe(true)
+    expect(e.confidence).toBe('low')
+    // The whole line survives as the source, so nothing the student needs is thrown away.
+    expect(e.source).toContain('late entry is not permitted')
+  })
+
+  it('leaves an ordinary title alone', () => {
+    const [e] = extractEvents('Sept 14: Quiz 1 (chapters 1-3)', fall)
+    expect(e).toMatchObject({ title: 'Quiz 1 (chapters 1-3)', confidence: 'high' })
+  })
+})

@@ -27,6 +27,24 @@ const LEAD_JOIN = /^(and|or|to|through|thru|until|till)\b[\s\-–—:,]*/i
 const WEEKDAY = /^(mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)[a-z]*\.?\s*/i
 const WEEK_PREFIX = /^(week|wk|unit|module|session|class|lecture|day)\s*#?\d+[:.\-–—]?\s*/i
 
+// chrono turns a length of time into a date by counting from the reference date, and marks the
+// month and the day certain when it does: "delayed submissions up to 3 days" in a late-work
+// policy comes back as the third day of term, indistinguishable from a date someone typed. No
+// syllabus schedules anything as a bare duration, so these are refused before they can become a
+// row. Letting them through is what put whole policy paragraphs on students' calendars.
+// chrono hands back the qualifier along with the span — "within 24 hours", "3 days later" —
+// so the parts are assembled rather than written out as one literal.
+const DUR_LEAD = '(?:within|in|after|before|up\\s+to|for|over|about|around|at\\s+least|at\\s+most|another|the\\s+next|the\\s+last|next|past|last|every)'
+const DUR_COUNT = '(?:\\d+|an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|couple(?:\\s+of)?|few|several)'
+const DUR_UNIT = '(?:minute|min|hour|hr|day|week|weekend|month|year)s?'
+const DUR_TAIL = '(?:later|earlier|ago|from\\s+now|out|prior|in\\s+advance)'
+const DURATION = new RegExp(`^(?:${DUR_LEAD}\\s+)?(?:${DUR_COUNT}[\\s-]*)?${DUR_UNIT}(?:\\s+${DUR_TAIL})?$`, 'i')
+
+// A title is what a student reads in a calendar row. Past this length the line is prose that
+// happened to carry a date, not a schedule entry, so it is cut to something readable and
+// flagged for a look. The untouched line stays on the event as its source.
+const TITLE_MAX = 120
+
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
@@ -105,7 +123,8 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     // due"), and taking only the first loses the rest. Each date certain to a month and a day,
     // and inside the term, becomes its own row; the dedupe below folds a date the line repeats.
     const dated = results.filter(
-      (r) => !/^\d{4}$/.test(r.text.trim()) && r.start.isCertain('month') && r.start.isCertain('day'),
+      (r) =>
+        !/^\d{4}$/.test(r.text.trim()) && !DURATION.test(r.text.trim()) && r.start.isCertain('month') && r.start.isCertain('day'),
     )
     const inTerm = dated.filter((r) => {
       const t = r.start.date().getTime()
@@ -119,7 +138,9 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       // was captured; reporting either as missed would be noise in the one place that has to be
       // trustworthy.
       if (/^\d{4}$/.test(r.text.trim())) continue
-      if (!r.start.isCertain('month') || !r.start.isCertain('day')) {
+      if (DURATION.test(r.text.trim())) {
+        report[i].skipped.push({ text: r.text, reason: 'a length of time, not a date', title })
+      } else if (!r.start.isCertain('month') || !r.start.isCertain('day')) {
         // A bare time is part of the line's date, not a date the report should claim was lost.
         if (!r.start.isCertain('hour')) report[i].skipped.push({ text: r.text, reason: 'no month and day', title })
       } else {
@@ -140,6 +161,11 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     if (title.length < 3) {
       confidence = 'low'
       reason = reason ?? 'no title found'
+    }
+    if (title.length > TITLE_MAX) {
+      title = title.slice(0, TITLE_MAX).replace(/\s+\S*$/, '') + '…'
+      confidence = 'low'
+      reason = reason ?? 'the line reads as a paragraph, not a schedule row'
     }
 
     // A time written once on the line belongs to the date on that line, but only when there is
