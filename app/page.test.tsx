@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from 'vitest'
 import { StrictMode } from 'react'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react'
 import Home from './page'
 import { type State } from '@/lib/store'
 import { STORAGE_KEY } from '@/lib/persist'
@@ -58,6 +58,19 @@ describe('Home', () => {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
     expect(stored.courses[0].events).toHaveLength(1)
     expect(stored.step).toBe(2)
+  })
+})
+
+describe('the progress trail', () => {
+  it('still goes forward after stepping back to the first screen', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...saved, step: 1 }))
+    render(<Home />)
+
+    const trail = await screen.findByRole('list', { name: 'Progress' })
+    const review = within(trail).getByRole('button', { name: /Review/ })
+    expect((review as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(review)
+    expect(await screen.findByText('Check the dates')).toBeTruthy()
   })
 })
 

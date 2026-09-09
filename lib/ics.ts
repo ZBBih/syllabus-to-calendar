@@ -10,9 +10,16 @@ export type CalendarEvent = {
   confidence: 'high' | 'low'
   reason?: string
   include?: boolean
-  /** What extraction originally produced, so re-runs can match rows the user has edited. */
+  /**
+   * What extraction originally produced, so re-runs can match rows the user has edited.
+   *
+   * `origDate` is also the seed of the calendar identity, so it is written once and never
+   * again: a deadline the professor moves keeps the entry it already has on the calendar.
+   */
   origDate?: string
   origTitle?: string
+  /** The student typed this date themselves, so no re-read of the syllabus may move it. */
+  userDated?: boolean
   /** The syllabus line the event came from, shown as the calendar description. */
   source?: string
   /** Set when a re-run of the syllabus no longer mentions this row. */

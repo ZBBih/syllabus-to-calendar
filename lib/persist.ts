@@ -40,6 +40,10 @@ function sanitizeEvent(raw: unknown): ExtractedEvent | null {
     source: isStr(e.source) ? e.source : undefined,
     manual: e.manual === true ? true : undefined,
     missing: e.missing === true ? true : undefined,
+    // Rows saved before this flag existed record a hand-corrected date only as a date that no
+    // longer matches what extraction found, which is exactly what the flag replaced. Reading
+    // the old shape as the new one keeps a student's own correction safe from the next re-read.
+    userDated: e.userDated === true || (isStr(e.origDate) && isStr(e.date) && e.date !== e.origDate) ? true : undefined,
   }
 }
 

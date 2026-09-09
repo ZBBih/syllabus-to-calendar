@@ -97,6 +97,15 @@ export default function Home() {
   if (canProceed(state.courses)) done.add(1)
   if (state.step === 3) done.add(2)
 
+  // A tick is earned; being reachable only takes the same gate the button on the screen uses.
+  // Once the classes are named there is always something to review and something to export, so
+  // stepping back to the first screen must not strand the student there.
+  const reachable = new Set<Step>()
+  if (canProceed(state.courses)) {
+    reachable.add(2)
+    reachable.add(3)
+  }
+
   const onLanding = state.step === 0
   const hasSavedWork =
     state.lastExport.length > 0 ||
@@ -113,7 +122,7 @@ export default function Home() {
           <span className={`font-display text-2xl ${onLanding ? '' : 'max-[400px]:hidden'}`}>Syllabify</span>
         </button>
         <div className="flex items-center gap-2 sm:gap-3">
-          {!onLanding && <Stepper current={state.step} done={done} onGo={(s) => dispatch({ type: 'setStep', step: s })} />}
+          {!onLanding && <Stepper current={state.step} done={done} reachable={reachable} onGo={(s) => dispatch({ type: 'setStep', step: s })} />}
           <span className="hidden h-5 w-px bg-line sm:block" />
           <SocialLinks className="hidden sm:flex" />
           <ThemeControl />

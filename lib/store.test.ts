@@ -65,6 +65,48 @@ describe('store: files and re-runs', () => {
     expect(s.courses[0].events[0]).toMatchObject({ id: evId, title: 'Quiz 1 (edited)', include: false })
   })
 
+  /**
+   * A re-read may move a deadline the professor moved, but never one the student typed. The
+   * two used to be told apart by comparing the date against the original, which stopped
+   * working the moment a re-read was allowed to move a row without re-seeding that original.
+   */
+  it('marks a row the student re-dated so a later re-read leaves it alone', () => {
+    let s = withText(initialState(), 'Sept 14: Quiz 1')
+    const id = s.courses[0].id
+    s = reducer(s, { type: 'mergeEvents', id, events: extractEvents(s.courses[0].text, fall) })
+    const evId = s.courses[0].events[0].id
+    s = reducer(s, { type: 'updateEvent', courseId: id, eventId: evId, patch: { date: '2026-09-16' } })
+    expect(s.courses[0].events[0].userDated).toBe(true)
+  })
+
+  it('leaves a row alone when the student edits something other than its date', () => {
+    let s = withText(initialState(), 'Sept 14: Quiz 1')
+    const id = s.courses[0].id
+    s = reducer(s, { type: 'mergeEvents', id, events: extractEvents(s.courses[0].text, fall) })
+    const evId = s.courses[0].events[0].id
+    s = reducer(s, { type: 'updateEvent', courseId: id, eventId: evId, patch: { title: 'Quiz one' } })
+    expect(s.courses[0].events[0].userDated).toBeUndefined()
+  })
+
+  /**
+   * The drop zone is where a student puts a revised syllabus, because it is the only place on
+   * the screen that takes a file. Adding a second class of the same name silently split the
+   * term in two and buried the change report that is the reason to re-read at all.
+   */
+  it('re-reads the class a dropped file belongs to instead of adding it twice', () => {
+    let s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL }] })
+    s = reducer(s, { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL.replace('Oct 14', 'Oct 21') }] })
+    expect(s.courses).toHaveLength(1)
+    expect(s.courses[0].events).toHaveLength(2)
+    expect(s.courses[0].diff?.moved).toHaveLength(1)
+  })
+
+  it('still adds a class whose name is new', () => {
+    let s = reducer(initialState(), { type: 'addFromFiles', files: [{ name: 'PSYC 101', text: SYL }] })
+    s = reducer(s, { type: 'addFromFiles', files: [{ name: 'BIOL 210', text: 'Nov 3 Lab report due' }] })
+    expect(s.courses.map((c) => c.name)).toEqual(['PSYC 101', 'BIOL 210'])
+  })
+
   it('changing the term of a class with no syllabus yet just moves the term', () => {
     // Re-reading is what a term change is for, and there is nothing to re-read here. The course
     // has to come back with the new term and still be marked unextracted, or the upload screen
