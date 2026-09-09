@@ -105,11 +105,13 @@ export function mergeWithDiff(existing: ExtractedEvent[], fresh: ExtractedEvent[
     unmatched.delete(i)
     const row = rows[i]
     row.missing = undefined
-    const userSetTheDate = row.origDate !== undefined && row.date !== row.origDate
-    if (row.date !== f.date && !userSetTheDate) {
+    // The row moves, but `origDate` does not: it seeds the calendar identity, and re-seeding it
+    // here is what used to cancel the old entry and add a second one instead of moving it.
+    // A date the student typed is theirs to keep, which is what `userDated` says and what the
+    // old comparison against `origDate` could no longer tell apart once a re-read had moved it.
+    if (row.date !== f.date && !row.userDated) {
       diff.moved.push({ id: row.id, from: row.date, to: f.date })
       row.date = f.date
-      row.origDate = f.date
       row.time = f.time ?? row.time
       row.source = f.source ?? row.source
     }

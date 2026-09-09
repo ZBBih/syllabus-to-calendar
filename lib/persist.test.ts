@@ -43,6 +43,21 @@ describe('sanitize rejects malformed dates and times', () => {
     expect(stored({ events: [{ id: 'e1', date: '2026-02-31', title: 'Exam' }] })?.courses[0].events[0].date).toBe('')
   })
 
+  /**
+   * Saved rows predate the flag, and there the only record of a hand-corrected date is that it
+   * differs from what extraction found. Reading that as the flag on the way in is what stops a
+   * student's own correction being overwritten by the first re-read after this change ships.
+   */
+  it('reads a hand-corrected date on an older saved row as the student\'s own', () => {
+    const s = sanitize({ courses: [{ id: 'c', events: [{ id: 'e', date: '2026-09-16', origDate: '2026-09-14', title: 'Essay' }] }] })
+    expect(s!.courses[0].events[0].userDated).toBe(true)
+  })
+
+  it('does not claim an untouched row was dated by the student', () => {
+    const s = sanitize({ courses: [{ id: 'c', events: [{ id: 'e', date: '2026-09-14', origDate: '2026-09-14', title: 'Essay' }] }] })
+    expect(s!.courses[0].events[0].userDated).toBeUndefined()
+  })
+
   it('drops a malformed time and end date', () => {
     const e = stored({
       events: [{ id: 'e1', date: '2026-09-14', title: 'Exam', time: '25:99', endDate: 'nope' }],
@@ -180,6 +195,7 @@ describe('everything a student can save survives a reload', () => {
     source: 'Oct 20-22: Fall break',
     missing: true,
     manual: true,
+    userDated: true,
   }
 
   const course: Required<Course> = {

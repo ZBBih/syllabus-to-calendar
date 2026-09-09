@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mergeEvents, mergeWithDiff, isEmptyDiff } from './merge'
 import type { ExtractedEvent } from './extract'
+import { eventUid } from './uid'
 
 const ev = (o: Partial<ExtractedEvent>): ExtractedEvent => ({
   id: o.id ?? Math.random().toString(36).slice(2),
@@ -71,10 +72,30 @@ describe('mergeWithDiff', () => {
   })
 
   it('does not overwrite a date the student corrected by hand', () => {
-    const existing = [extracted({ id: 'a', date: '2026-09-16', origDate: '2026-09-14', title: 'Essay' })]
+    const existing = [extracted({ id: 'a', date: '2026-09-16', origDate: '2026-09-14', title: 'Essay', userDated: true })]
     const { events, diff } = mergeWithDiff(existing, [extracted({ id: 'x', date: '2026-09-21', title: 'Essay' })])
     expect(events[0].date).toBe('2026-09-16')
     expect(diff.moved).toEqual([])
+  })
+
+  /**
+   * The whole point of a content-hashed UID is that a second import corrects the calendar in
+   * place. A deadline the professor moved is the commonest reason to import again, so it is
+   * the one case that must not re-seed the hash: doing so cancels the old entry and adds a
+   * new one, which on Apple Calendar leaves a struck-through ghost on the old date.
+   */
+  it('keeps the calendar identity of a deadline the professor moved', () => {
+    const before = extracted({ id: 'a', date: '2026-09-14', title: 'Essay' })
+    const { events } = mergeWithDiff([before], [extracted({ id: 'x', date: '2026-09-21', title: 'Essay' })])
+    expect(events[0].date).toBe('2026-09-21')
+    expect(eventUid('ECON 101', events[0])).toBe(eventUid('ECON 101', before))
+  })
+
+  it('moves the same deadline again when a later file moves it again', () => {
+    const first = mergeWithDiff([extracted({ id: 'a', date: '2026-09-14', title: 'Essay' })], [extracted({ id: 'x', date: '2026-09-21', title: 'Essay' })])
+    const second = mergeWithDiff(first.events, [extracted({ id: 'y', date: '2026-10-05', title: 'Essay' })])
+    expect(second.events[0].date).toBe('2026-10-05')
+    expect(second.diff.moved).toEqual([{ id: 'a', from: '2026-09-21', to: '2026-10-05' }])
   })
 
   it('flags a row the new file no longer mentions instead of deleting it', () => {

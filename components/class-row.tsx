@@ -4,6 +4,7 @@ import { useState, type Dispatch } from 'react'
 import { SEASONS, type Season } from '@/lib/extract'
 import type { Action, Course } from '@/lib/store'
 import { DAY_LABEL } from '@/lib/meeting'
+import { diffCount } from '@/lib/merge'
 import { Doc, Trash, X } from './icons'
 
 const thisYear = new Date().getFullYear()
@@ -23,6 +24,7 @@ export function ClassRow({
   const [touched, setTouched] = useState(false)
   const n = course.events.length
   const weights = course.weights?.length ?? 0
+  const changes = diffCount(course.diff)
   const nameMissing = course.name.trim() === ''
 
   return (
@@ -55,6 +57,13 @@ export function ClassRow({
             <>
               <span className={`pill ${n ? 'pill-ok' : 'pill-quiet'}`}>{n ? `${n} date${n === 1 ? '' : 's'}` : 'no dates yet'}</span>
               {weights > 0 && <span className="pill pill-quiet">grading table found</span>}
+              {/* The drop zone re-reads a class it already has, and a revised file whose date
+                  count happens to match the old one would otherwise land with no sign at all. */}
+              {changes > 0 && (
+                <span className="pill pill-warn">
+                  {changes} change{changes === 1 ? '' : 's'} since the last read
+                </span>
+              )}
             </>
           )}
           <button type="button" onClick={onEditText} className="link text-xs">

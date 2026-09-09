@@ -101,6 +101,23 @@ function reread(course: Course, text: string, term = course.term): Course {
   }
 }
 
+/**
+ * Which class a dropped file belongs to, or -1 for a class that is not on screen yet.
+ *
+ * Matching is exact once case and spacing are set aside. A false match folds two real classes
+ * into one and loses a syllabus, which is far worse than the duplicate row a missed match
+ * leaves behind, so nothing cleverer than this is wanted here.
+ */
+function sameClassIndex(courses: Course[], name: string): number {
+  const key = norm(name)
+  if (!key) return -1
+  return courses.findIndex((c) => c.text.trim() !== '' && norm(c.name) === key)
+}
+
+function norm(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
 export function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'add':
@@ -139,17 +156,28 @@ export function reducer(state: State, action: Action): State {
       const courses = [...state.courses]
       let first = true
       for (const f of action.files) {
-        const last = courses[courses.length - 1]
-        const blank = first && courses.length > 0 && !last.name.trim() && !last.text.trim()
-        first = false
-        const base = blank ? courses.pop()! : newCourse()
         // The file name is the first guess, and the text answers when it has nothing to say: a
         // pasted syllabus has no file name, and a class with dates cannot leave the first screen
         // unnamed. The text also wins when it names a course code and the file name does not,
         // because a photographed syllabus is called IMG_4821 and its first line is CHEM 120.
         const fromText = nameFromText(f.text)
         const fromFile = f.name.trim()
-        const name = base.name.trim() || (looksLikeCode(fromText) && !looksLikeCode(fromFile) ? fromText : fromFile || fromText)
+        const guess = looksLikeCode(fromText) && !looksLikeCode(fromFile) ? fromText : fromFile || fromText
+        // A file naming a class already on screen is the revised syllabus, not a second class.
+        // The drop zone is the only thing on this screen that takes a file, so it is where a
+        // student brings the update the whole re-read feature exists for; adding a duplicate
+        // class instead split the term in two and hid the change report.
+        const i = sameClassIndex(courses, guess)
+        if (i !== -1) {
+          const term = termFromText(f.text) ?? courses[i].term
+          courses[i] = { ...reread(courses[i], f.text, term), viaPhoto: f.viaPhoto === true ? true : undefined }
+          continue
+        }
+        const last = courses[courses.length - 1]
+        const blank = first && courses.length > 0 && !last.name.trim() && !last.text.trim()
+        first = false
+        const base = blank ? courses.pop()! : newCourse()
+        const name = base.name.trim() || guess
         const term = termFromText(f.text) ?? base.term
         courses.push({ ...reread(base, f.text, term), name, viaPhoto: f.viaPhoto === true })
       }
@@ -166,7 +194,14 @@ export function reducer(state: State, action: Action): State {
     case 'updateEvent':
       return mapCourse(state, action.courseId, (c) => ({
         ...c,
-        events: c.events.map((e) => (e.id === action.eventId ? { ...e, ...action.patch } : e)),
+        // Every edit a student makes to a row comes through here, which makes it the one place
+        // that can say a date was typed rather than read. A re-read of the syllabus honours
+        // that: the professor may move a deadline, but not one the student has already fixed.
+        events: c.events.map((e) => {
+          if (e.id !== action.eventId) return e
+          const retyped = action.patch.date !== undefined && action.patch.date !== e.date
+          return retyped ? { ...e, ...action.patch, userDated: true } : { ...e, ...action.patch }
+        }),
       }))
     case 'addEvent':
       return mapCourse(state, action.courseId, (c) => {

@@ -25,6 +25,22 @@ describe('ClassRow', () => {
     rerender(<ClassRow course={course({ name: '' })} index={0} dispatch={dispatch} onEditText={() => {}} />)
     expect(screen.queryByRole('button', { name: /clear name/i })).toBeNull()
   })
+  /**
+   * Re-reading now happens on the same drop zone that adds a class, so the row itself has to
+   * say the file landed. Without it a revised syllabus whose date count has not changed looks
+   * from this screen exactly like nothing happening.
+   */
+  it('says how much a re-read changed', () => {
+    const diff = { added: ['e2'], moved: [{ id: 'e', from: '2026-09-14', to: '2026-09-21' }], missing: [] }
+    render(<ClassRow course={course({ diff })} index={0} dispatch={vi.fn()} onEditText={() => {}} />)
+    expect(screen.getByText('2 changes since the last read')).toBeTruthy()
+  })
+
+  it('stays quiet on a class that has only been read once', () => {
+    render(<ClassRow course={course({})} index={0} dispatch={vi.fn()} onEditText={() => {}} />)
+    expect(screen.queryByText(/since the last read/)).toBeNull()
+  })
+
   it('drops a class on the first click, with dates or without, and never asks', () => {
     const dispatch = vi.fn()
     const confirmSpy = vi.spyOn(window, 'confirm')
