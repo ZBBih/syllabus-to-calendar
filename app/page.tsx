@@ -186,6 +186,8 @@ export default function Home() {
               <SocialLinks />
             </div>
             <SupportLink />
+            {/* Which build this is. Small, but it settles "are you even looking at the fix?" at a glance. */}
+            <p className="font-mono text-[11px] text-muted/70">build {process.env.NEXT_PUBLIC_BUILD_STAMP}</p>
           </div>
         </div>
       </footer>

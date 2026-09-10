@@ -1,4 +1,10 @@
 import type { NextConfig } from 'next'
+import { buildStamp } from './lib/site'
+
+// Resolved once, when the build runs, so the footer can say which build is on screen. Set on the
+// environment rather than through the `env` config key: that key is marked legacy, and the docs
+// are explicit that the NEXT_PUBLIC_ prefix only takes effect for variables that arrive this way.
+process.env.NEXT_PUBLIC_BUILD_STAMP ??= buildStamp(process.env.VERCEL_GIT_COMMIT_SHA)
 
 const csp = [
   "default-src 'self'",

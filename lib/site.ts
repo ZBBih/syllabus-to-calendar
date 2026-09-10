@@ -21,3 +21,18 @@ export const SITE_URL = 'https://syllabify-app.vercel.app'
  * the field entirely. Bump this when the copy or the product actually changes.
  */
 export const CONTENT_UPDATED = '2026-09-07'
+
+/**
+ * Which build is on screen.
+ *
+ * This exists because a day was lost to the public link being pinned to a day-old preview: every
+ * fix looked absent, and there was no way to tell from the page which build you were looking at.
+ * Inferring it from behaviour has cost a phone round-trip since. A commit is the best answer when
+ * the deploy came from git; a CLI deploy has no commit, so the build time distinguishes it
+ * instead. Both are short enough to read out over a message.
+ */
+export function buildStamp(sha?: string, at: Date = new Date()): string {
+  const clean = sha?.trim()
+  if (clean) return clean.slice(0, 7)
+  return at.toISOString().slice(5, 16).replace('T', ' ')
+}
