@@ -56,7 +56,14 @@ function iso(d: Date) {
  */
 export function detectMeeting(text: string, term: Term): Meeting | null {
   const head = text.split('\n').slice(0, 40)
-  for (const line of head) {
+  // A syllabus that labels the row ("Class Hours") often puts the days on the next line and the
+  // times on the one after, so each line is also tried joined to the one that follows it. The
+  // pairs are read in document order, which keeps a header row ahead of anything further down.
+  const candidates = head.flatMap((line, i) => (i + 1 < head.length ? [line, `${line} ${head[i + 1]}`] : [line]))
+  for (const line of candidates) {
+    // Office hours are a time a professor is in a room, not a class anyone has to attend, and
+    // they are written in exactly the shape this looks for.
+    if (/office\s+hours?/i.test(line)) continue
     const time = TIME_RANGE.exec(line)
     if (!time) continue
     const days = daysFromLine(line)

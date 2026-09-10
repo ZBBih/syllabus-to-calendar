@@ -34,11 +34,40 @@ const WEEK_PREFIX = /^(week|wk|unit|module|session|class|lecture|day)\s*#?\d+[:.
 // row. Letting them through is what put whole policy paragraphs on students' calendars.
 // chrono hands back the qualifier along with the span — "within 24 hours", "3 days later" —
 // so the parts are assembled rather than written out as one literal.
-const DUR_LEAD = '(?:within|in|after|before|up\\s+to|for|over|about|around|at\\s+least|at\\s+most|another|the\\s+next|the\\s+last|next|past|last|every)'
+const DUR_LEAD = '(?:within|in|after|before|up\\s+to|for|over|about|around|at\\s+least|at\\s+most|another|the\\s+next|the\\s+last|next|past|last|every|the|this|that|each)'
 const DUR_COUNT = '(?:\\d+|an?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|couple(?:\\s+of)?|few|several)'
 const DUR_UNIT = '(?:minute|min|hour|hr|day|week|weekend|month|year)s?'
 const DUR_TAIL = '(?:later|earlier|ago|from\\s+now|out|prior|in\\s+advance)'
 const DURATION = new RegExp(`^(?:${DUR_LEAD}\\s+)?(?:${DUR_COUNT}[\\s-]*)?${DUR_UNIT}(?:\\s+${DUR_TAIL})?$`, 'i')
+
+// The other half of the same trap. chrono resolves "now" against the reference date and marks
+// the result certain in month and day, so the word inside a sentence — "we now create as much
+// data as..." — arrives indistinguishable from a date someone typed, on the first day of term.
+const CASUAL = /^(?:now|today|tonight|tomorrow|yesterday)$/i
+
+// A date does not sit inside an equation. "your final score remains 400 × 10/10 = 400" reads
+// as the tenth of October otherwise, which is a real row on a real syllabus.
+const ARITHMETIC = /[×*=]\s*$/
+
+/** Whether a span chrono matched is something other than a date, and must not become a row. */
+function notADate(r: { text: string; index: number }, line: string): boolean {
+  const text = r.text.trim()
+  if (/^\d{4}$/.test(text)) return true
+  if (DURATION.test(text) || CASUAL.test(text)) return true
+  const before = line.slice(0, r.index)
+  const after = line.slice(r.index + r.text.length)
+  return ARITHMETIC.test(before) || /^\s*[×*=]/.test(after)
+}
+
+// A time is written as a clock: it has a colon or it says am or pm. Without that rule "groups
+// of 4–6 students" starts a deadline at four in the morning and "Lecture 12-1" starts a class
+// at noon, both of which happened on a real syllabus.
+const CLOCK = /\d\s*(?::\s*\d|[ap]\.?m\.?)/i
+
+// A date at the front of a line is a schedule row. A date with a sentence on both sides of it
+// is prose that mentions a deadline, and past this length that is what the line is. The date
+// is real, so the row is still offered — it just arrives unticked rather than pre-approved.
+const SENTENCE_MIN = 80
 
 // A title is what a student reads in a calendar row. Past this length the line is prose that
 // happened to carry a date, not a schedule entry, so it is cut to something readable and
@@ -115,21 +144,28 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     const results = chrono.parse(line, ref, { forwardDate: true })
     if (results.length === 0) continue
 
-    let remainder = line
-    for (const r of results) remainder = remainder.replace(r.text, ' ')
-    let title = cleanTitle(remainder)
-
     // A schedule row often carries more than one date ("Sept 9 / Sept 11  Reading response 1
     // due"), and taking only the first loses the rest. Each date certain to a month and a day,
     // and inside the term, becomes its own row; the dedupe below folds a date the line repeats.
-    const dated = results.filter(
-      (r) =>
-        !/^\d{4}$/.test(r.text.trim()) && !DURATION.test(r.text.trim()) && r.start.isCertain('month') && r.start.isCertain('day'),
-    )
+    const dated = results.filter((r) => !notADate(r, line) && r.start.isCertain('month') && r.start.isCertain('day'))
     const inTerm = dated.filter((r) => {
       const t = r.start.date().getTime()
       return t >= min && t <= max
     })
+
+    // What comes out of the title is everything the parser read as a date or a clock, whether
+    // or not the row could use it: half of a range, or a date outside the term, is noise in a
+    // calendar entry. What stays is what was refused for not being a date at all — a lecture
+    // numbered 12-1, a group of 4–6 students, "the end of the day" — because those are words
+    // in the sentence, and cutting them left holes like "Due by the end of on".
+    const strip = results.filter((r) => {
+      if (notADate(r, line)) return false
+      if (r.start.isCertain('month') && r.start.isCertain('day')) return true
+      return !r.start.isCertain('hour') || CLOCK.test(r.text)
+    })
+    let remainder = line
+    for (const r of strip) remainder = remainder.replace(r.text, ' ')
+    let title = cleanTitle(remainder)
 
     // Everything the line offered and extraction turned down, with the reason, for the report.
     for (const r of results) {
@@ -138,7 +174,7 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       // was captured; reporting either as missed would be noise in the one place that has to be
       // trustworthy.
       if (/^\d{4}$/.test(r.text.trim())) continue
-      if (DURATION.test(r.text.trim())) {
+      if (notADate(r, line)) {
         report[i].skipped.push({ text: r.text, reason: 'a length of time, not a date', title })
       } else if (!r.start.isCertain('month') || !r.start.isCertain('day')) {
         // A bare time is part of the line's date, not a date the report should claim was lost.
@@ -167,6 +203,16 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     // title is not, and there is no way to tell from the text which half the student wants —
     // so the row is offered rather than taken. It stays visible and one tap from included.
     let prose = false
+    // A sentence long enough to be prose, with the date buried inside it rather than leading
+    // it. On the syllabus that prompted this, twenty-two such rows arrived ticked and none
+    // were flagged, which is a paragraph of the document landing on a student's calendar.
+    const first = inTerm[0]
+    const buried = line.slice(0, first.index).trim() !== '' && line.slice(first.index + first.text.length).trim() !== ''
+    if (line.length >= SENTENCE_MIN && buried) {
+      confidence = 'low'
+      reason = reason ?? 'the date sits inside a sentence, not a schedule row'
+      prose = true
+    }
     if (title.length > TITLE_MAX) {
       title = title.slice(0, TITLE_MAX).replace(/\s+\S*$/, '') + '…'
       confidence = 'low'
@@ -177,12 +223,12 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     // A time written once on the line belongs to the date on that line, but only when there is
     // a single date to give it to: "Sept 9 / Sept 11, both due 5pm" is the rare shape, and
     // guessing wrong there puts a deadline at the wrong hour.
-    const lineTime = inTerm.length === 1 ? results.find((x) => x.start.isCertain('hour'))?.start : undefined
+    const lineTime = inTerm.length === 1 ? results.find((x) => x.start.isCertain('hour') && CLOCK.test(x.text))?.start : undefined
     const source = lines[i - (reason === 'date only' ? 1 : 0)]
 
     for (const r of inTerm) {
       const start = r.start.date()
-      const timed = r.start.isCertain('hour') ? r.start : lineTime
+      const timed = r.start.isCertain('hour') && CLOCK.test(r.text) ? r.start : lineTime
       const time = timed
         ? `${String(timed.get('hour')).padStart(2, '0')}:${String(timed.get('minute') ?? 0).padStart(2, '0')}`
         : undefined
