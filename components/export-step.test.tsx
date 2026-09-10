@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import { ExportStep, defaultTab } from './export-step'
+import { ExportStep, defaultTab, isAppleMobile, nav } from './export-step'
 import type { State } from '@/lib/store'
 import { SITE_URL } from '@/lib/site'
 import { courseTag, eventUid } from '@/lib/uid'
@@ -43,6 +43,149 @@ describe('defaultTab', () => {
     expect(defaultTab('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)')).toBe('Apple')
     expect(defaultTab('Mozilla/5.0 (Linux; Android 14; Pixel 8)')).toBe('Google')
     expect(defaultTab('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe('Google')
+  })
+})
+
+describe('isAppleMobile', () => {
+  it('is true for a phone and a tablet, false for the desktop that shares their name', () => {
+    expect(isAppleMobile('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)')).toBe(true)
+    expect(isAppleMobile('Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)')).toBe(true)
+    // iPadOS calls itself a Mac. The touch points are the only thing that tells them apart, so a
+    // real Mac must not be sent down the phone route and lose its working download.
+    expect(isAppleMobile('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)', 5)).toBe(true)
+    expect(isAppleMobile('Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)', 0)).toBe(false)
+    expect(isAppleMobile('Mozilla/5.0 (Linux; Android 14; Pixel 8)', 5)).toBe(false)
+    expect(isAppleMobile('Mozilla/5.0 (Windows NT 10.0; Win64; x64)')).toBe(false)
+  })
+})
+
+const REAL_UA = navigator.userAgent
+
+describe('ExportStep on an iPhone', () => {
+  /*
+    The share sheet is a dead end for calendars: Calendar is not in it, so the file reaches
+    whichever app claimed .ics and the student gets a preview they cannot accept. Navigating to
+    the file instead gets Apple's own event list with an Add All button. Verified on a real
+    iPhone before this was written.
+  */
+  const asIPhone = () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)',
+      configurable: true,
+    })
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true })
+  }
+
+  // navigator is shared across every test in this file, so leaving it as a phone would quietly
+  // send the tests below down the phone route and let them pass for the wrong reason.
+  afterEach(() => {
+    Object.defineProperty(navigator, 'userAgent', { value: REAL_UA, configurable: true })
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+    // canShare decides which route the tests below take, so it has to go back to absent too.
+    Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true, writable: true })
+    vi.restoreAllMocks()
+  })
+
+  it('navigates to the file rather than sharing it, and records the export first', () => {
+    asIPhone()
+    const order: string[] = []
+    const share = vi.fn(() => {
+      order.push('share')
+      return Promise.resolve()
+    })
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true, writable: true })
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:calendar'), revokeObjectURL: vi.fn() })
+    const go = vi.spyOn(nav, 'go').mockImplementation(() => order.push('navigate'))
+    const dispatch = vi.fn((a: { type: string }) => {
+      if (a.type === 'recordExport') order.push('record')
+    })
+    const persistNow = vi.fn(() => order.push('persist'))
+
+    render(<ExportStep state={base} dispatch={dispatch} persistNow={persistNow} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+
+    expect(go).toHaveBeenCalledWith('blob:calendar')
+    expect(share).not.toHaveBeenCalled()
+    // The page is replaced by the import screen, so the history has to be written before we go.
+    expect(order).toEqual(['record', 'persist', 'navigate'])
+  })
+
+  it('hands the file the right type, or the phone shows a share sheet instead of the list', () => {
+    asIPhone()
+    const blobs: Blob[] = []
+    Object.assign(URL, {
+      createObjectURL: vi.fn((b: Blob) => {
+        blobs.push(b)
+        return 'blob:calendar'
+      }),
+      revokeObjectURL: vi.fn(),
+    })
+    vi.spyOn(nav, 'go').mockImplementation(() => {})
+    render(<ExportStep state={base} dispatch={vi.fn()} persistNow={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+    expect(blobs[0].type).toBe('text/calendar;charset=utf-8')
+  })
+
+  /*
+    The route and the instructions must never disagree. A Mac opens the Apple tab too, so keying
+    the phone steps off the tab would promise Add All to a machine that gets a download — and if
+    the phone check ever answered wrongly, it would promise it to a phone that gets a share sheet.
+  */
+  it('only promises Add All to a device actually taking that route', () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    // A real Mac: Apple tab, but the download route, so it must not be told about Add All.
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)',
+      configurable: true,
+    })
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+    render(<ExportStep state={base} dispatch={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /apple calendar/i })).toBeTruthy()
+    expect(screen.queryByText(/Add All/)).toBeNull()
+    expect(screen.getByText(/double-click syllabify\.ics/i)).toBeTruthy()
+    cleanup()
+
+    // The same tab on a phone does get the Add All steps.
+    asIPhone()
+    render(<ExportStep state={base} dispatch={vi.fn()} />)
+    expect(screen.getAllByText(/Add All/).length).toBeGreaterThan(0)
+  })
+
+  it('names Add All in the instructions, because that is the button the phone shows', () => {
+    asIPhone()
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    render(<ExportStep state={base} dispatch={vi.fn()} />)
+    expect(screen.getByText(/tap add all/i)).toBeTruthy()
+    // The old route told them to save the file first. That is no longer how they get there.
+    expect(screen.queryByText(/save to files/i)).toBeNull()
+  })
+
+  /*
+    The import screen belongs to Apple and reports nothing back, so the app cannot tell a student
+    who tapped Add All from one who backed out. It has to stop short of claiming the events
+    landed; this app's phone instructions have twice shipped saying something that was not true.
+  */
+  it('does not claim the events landed, because it cannot know that they did', () => {
+    asIPhone()
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    vi.spyOn(nav, 'go').mockImplementation(() => {})
+    render(<ExportStep state={base} dispatch={vi.fn()} persistNow={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+    const done = screen.getByText(/if you tapped add all/i)
+    expect(done).toBeTruthy()
+    expect(done.textContent).not.toMatch(/^every date is on your calendar/i)
+  })
+
+  it('keeps a way to send the file elsewhere, which is the route to a computer', () => {
+    asIPhone()
+    const share = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true, writable: true })
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true, writable: true })
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    vi.spyOn(nav, 'go').mockImplementation(() => {})
+    render(<ExportStep state={base} dispatch={vi.fn()} persistNow={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /send the file somewhere else/i }))
+    expect(share).toHaveBeenCalledTimes(1)
   })
 })
 

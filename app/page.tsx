@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { Logo } from '@/components/logo'
 import { ThemeControl } from '@/components/theme-control'
 import { Stepper } from '@/components/stepper'
@@ -10,7 +10,7 @@ import { ReviewStep } from '@/components/review-step'
 import { ExportStep } from '@/components/export-step'
 import { SwRegister } from '@/components/sw-register'
 import { SocialLinks, SupportLink } from '@/components/site-links'
-import { initialState, reducer, type Step } from '@/lib/store'
+import { initialState, reducer, type State, type Step } from '@/lib/store'
 import { createSaver, load, save, STORAGE_KEY } from '@/lib/persist'
 
 export default function Home() {
@@ -26,6 +26,17 @@ export default function Home() {
   // One saver for the life of the page: writing the whole state on every dispatch means
   // re-serialising every syllabus loaded for each character typed.
   const [saver] = useState(() => createSaver(save, 400, (ok) => setStorageBlocked(!ok)))
+
+  // Adding to a calendar on an iPhone replaces this page with the system's import screen, so
+  // the export record cannot wait for the debounce. Cancel what is queued and write it now;
+  // anything still pending is this same state or older.
+  const persistNow = useCallback(
+    (next: State) => {
+      saver.cancel()
+      setStorageBlocked(!save(next))
+    },
+    [saver],
+  )
 
   useEffect(() => {
     const saved = load()
@@ -138,7 +149,7 @@ export default function Home() {
       {state.step === 0 && <Landing dispatch={dispatch} />}
       {state.step === 1 && <UploadStep state={state} dispatch={dispatch} />}
       {state.step === 2 && <ReviewStep state={state} dispatch={dispatch} />}
-      {state.step === 3 && <ExportStep state={state} dispatch={dispatch} />}
+      {state.step === 3 && <ExportStep state={state} dispatch={dispatch} persistNow={persistNow} />}
 
       <footer className="mt-20 border-t border-line pt-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -175,6 +186,8 @@ export default function Home() {
               <SocialLinks />
             </div>
             <SupportLink />
+            {/* Which build this is. Small, but it settles "are you even looking at the fix?" at a glance. */}
+            <p className="font-mono text-[11px] text-muted/70">build {process.env.NEXT_PUBLIC_BUILD_STAMP}</p>
           </div>
         </div>
       </footer>
