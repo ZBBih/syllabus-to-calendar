@@ -60,8 +60,7 @@ function Sheet({ ink, still }: { ink: ArtInk; still?: boolean }) {
           height="5"
           rx="2.5"
           fill={ink.line}
-          className={still ? undefined : "art-line"}
-          style={still ? undefined : { animationDelay: `${i * 90}ms` }}
+          className={still ? undefined : `art-line art-line-${i}`}
         />
       ))}
       <rect
@@ -91,8 +90,7 @@ function Chips({ ink, still }: { ink: ArtInk; still?: boolean }) {
       {[0, 1, 2].map((i) => (
         <g
           key={i}
-          className={still ? undefined : "art-chip"}
-          style={still ? undefined : { animationDelay: `${350 + i * 430}ms` }}
+          className={still ? undefined : `art-chip art-chip-${i}`}
         >
           <rect
             x={CHIP.x}
@@ -190,12 +188,7 @@ function Calendar({ ink, still }: { ink: ArtInk; still?: boolean }) {
                   height={b.size}
                   rx="4"
                   fill={ink.accent}
-                  className={still ? undefined : "art-cell"}
-                  style={
-                    still
-                      ? undefined
-                      : { animationDelay: `${900 + hit.order * 260}ms` }
-                  }
+                  className={still ? undefined : `art-cell art-cell-${hit.order}`}
                 />
               )}
             </g>

@@ -6,7 +6,7 @@ const csp = [
   // core. It permits WebAssembly compilation only, not eval of JavaScript, so the page still
   // cannot run injected script.
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "worker-src 'self' blob:",

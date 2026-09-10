@@ -41,14 +41,13 @@ export function Stepper({
               }`}
             >
               <span
-                className={`flex items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${
+                className={`flex items-center justify-center rounded-full size-[1.375rem] text-[11px] font-semibold tabular-nums ${
                   isCurrent
                     ? 'bg-accent text-accent-ink'
                     : isDone
                       ? 'bg-accent-soft text-accent'
                       : 'border border-line-strong text-muted'
                 }`}
-                style={{ height: '1.375rem', width: '1.375rem' }}
               >
                 {isDone && !isCurrent ? <Check size={12} /> : s}
               </span>

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import {
   ART_HEIGHT,
   ART_WIDTH,
@@ -68,5 +70,34 @@ describe("the illustration", () => {
       expect(x + w).toBeLessThanOrEqual(ART_WIDTH);
       expect(y + h).toBeLessThanOrEqual(ART_HEIGHT);
     }
+  });
+
+  /*
+    The entrance delays are CSS classes rather than style attributes, because the
+    Content-Security-Policy does not allow an inline style. Nothing in the type system ties the
+    number of rules to the number of shapes, so adding a sheet line or a filled day would
+    silently give the new one a 0ms delay and break the sequence. This is the thing that
+    notices.
+  */
+  it("has a delay class in globals.css for every animated shape", () => {
+    const css = readFileSync(
+      path.resolve(import.meta.dirname, "../app/globals.css"),
+      "utf8",
+    );
+    const expected = [
+      ...SHEET_LINES.map((_, i) => [`art-line-${i}`, i * 90] as const),
+      ...[0, 1, 2].map((i) => [`art-chip-${i}`, 350 + i * 430] as const),
+      ...FILLED.map((f) => [`art-cell-${f.order}`, 900 + f.order * 260] as const),
+    ];
+    for (const [cls, ms] of expected) {
+      expect(css, `missing rule for .${cls}`).toContain(
+        `.hero-art .${cls} { animation-delay: ${ms}ms; }`,
+      );
+    }
+    // And no rule for a shape that does not exist, so a removed one does not linger.
+    const declared = [...css.matchAll(/\.hero-art \.(art-(?:line|chip|cell)-\d+) \{/g)].map(
+      (m) => m[1],
+    );
+    expect(declared.sort()).toEqual(expected.map(([c]) => c).sort());
   });
 });
