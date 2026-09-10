@@ -72,7 +72,10 @@ function sanitizeEntry(raw: unknown): ExportedEntry | null {
   const e = raw as Record<string, unknown>
   if (!isStr(e.uid) || !isStr(e.date) || !isStr(e.summary)) return null
   if (!isSafeUid(e.uid) || !isIsoDate(e.date)) return null
-  return { uid: e.uid, date: e.date, summary: e.summary }
+  // The tag is a 64-bit hash in hex or it is nothing. A row that arrives with anything else
+  // loses only its class, which costs a per-class withdrawal and never the calendar identity.
+  const courseTag = isStr(e.courseTag) && /^[0-9a-f]{16}$/.test(e.courseTag) ? e.courseTag : undefined
+  return { uid: e.uid, date: e.date, summary: e.summary, courseTag }
 }
 
 const DAYS = new Set(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])

@@ -287,6 +287,22 @@ body {
   .step-enter {
     animation: rise 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /*
+    Entrance steps, for a short run of siblings that should arrive one after another. The
+    numbers are deliberately coarser than .stagger's: these are read as separate sentences,
+    not as one list settling. Classes rather than a style attribute, for the same reason as
+    the hero art further down.
+  */
+  .rise-1 {
+    animation-delay: 60ms;
+  }
+  .rise-2 {
+    animation-delay: 120ms;
+  }
+  .rise-3 {
+    animation-delay: 180ms;
+  }
   .stagger > * {
     animation: rise 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
@@ -430,6 +446,30 @@ body {
     transform-origin: center;
     animation: cell-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+
+  /*
+    The entrance delays. These sat on a style attribute until the Content-Security-Policy
+    dropped 'unsafe-inline' from style-src; a style attribute is exactly what that keyword
+    permits, and these fourteen were the only ones the page had. The sequences are the
+    arithmetic the component used to compute: a sheet line every 90ms, a date leaving 430ms
+    after the one before it once the paper has landed, and a calendar day filling 260ms after
+    the date ahead of it arrives. One rule per index, so the count here has to match
+    SHEET_LINES and FILLED in lib/art.ts — art.test.ts fails if it drifts.
+  */
+  .hero-art .art-line-0 { animation-delay: 0ms; }
+  .hero-art .art-line-1 { animation-delay: 90ms; }
+  .hero-art .art-line-2 { animation-delay: 180ms; }
+  .hero-art .art-line-3 { animation-delay: 270ms; }
+  .hero-art .art-line-4 { animation-delay: 360ms; }
+  .hero-art .art-line-5 { animation-delay: 450ms; }
+  .hero-art .art-chip-0 { animation-delay: 350ms; }
+  .hero-art .art-chip-1 { animation-delay: 780ms; }
+  .hero-art .art-chip-2 { animation-delay: 1210ms; }
+  .hero-art .art-cell-0 { animation-delay: 900ms; }
+  .hero-art .art-cell-1 { animation-delay: 1160ms; }
+  .hero-art .art-cell-2 { animation-delay: 1420ms; }
+  .hero-art .art-cell-3 { animation-delay: 1680ms; }
+  .hero-art .art-cell-4 { animation-delay: 1940ms; }
 
   /* The same shapes, still, in the smaller spots. */
   .art-card {

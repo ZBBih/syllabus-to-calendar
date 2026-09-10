@@ -20,13 +20,13 @@ export default function NotFound() {
     <main className="mx-auto flex min-h-dvh max-w-xl flex-col items-center justify-center px-6 text-center">
       <ArtCrop part="document" size={180} className="crop-in" />
       <h1 className="h1 rise mt-6">That page is not on the syllabus.</h1>
-      <p className="lede rise mx-auto mt-4" style={{ animationDelay: '60ms' }}>
+      <p className="lede rise rise-1 mx-auto mt-4">
         Whatever you were looking for is not due here. The real work is back on the home page.
       </p>
-      <Link href="/" className="btn btn-primary btn-hero rise mt-8" style={{ animationDelay: '120ms' }}>
+      <Link href="/" className="btn btn-primary btn-hero rise rise-2 mt-8">
         Back to Syllabify
       </Link>
-      <p className="rise mt-6 text-xs text-muted" style={{ animationDelay: '180ms' }}>
+      <p className="rise rise-3 mt-6 text-xs text-muted">
         Nothing you had in progress is lost. Your classes are saved in this browser.
       </p>
     </main>

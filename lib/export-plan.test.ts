@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { planForAll, planForCourse, withdrawn, mergeHistory } from './export'
-import { eventUid } from './uid'
+import { courseTag, eventUid } from './uid'
 import type { Course, State } from './store'
 import type { ExtractedEvent } from './extract'
 
@@ -87,6 +87,68 @@ describe('planForCourse', () => {
     const one = planForCourse(econ, state({ lastExport: both.entries, exportSequence: 1 }))
     expect(one.cancelled).toBe(0)
     expect(one.ics).not.toContain('STATUS:CANCELLED')
+  })
+
+  it('withdraws a row this class has lost since the last export', () => {
+    const before = course('ECON 101', [ev({ id: 'a', title: 'Quiz' }), ev({ id: 'b', date: '2026-10-01', title: 'Essay' })])
+    const psyc = course('PSYC 101', [ev({ id: 'c', date: '2026-11-02', title: 'Paper' })])
+    const first = planForAll([before, psyc], state())
+    const after = course('ECON 101', [ev({ id: 'a', title: 'Quiz' })])
+    const one = planForCourse(after, state({ courses: [after, psyc], lastExport: first.entries, exportSequence: 1 }))
+    expect(one.cancelled).toBe(1)
+    expect(one.ics).toContain('STATUS:CANCELLED')
+    expect(one.ics).toContain(`UID:${eventUid('ECON 101', { date: '2026-10-01', title: 'Essay' })}`)
+    // The other class was not in this file at all, so its row must survive it.
+    expect(one.ics).not.toContain(`UID:${eventUid('PSYC 101', { date: '2026-11-02', title: 'Paper' })}`)
+  })
+
+  it('withdraws a row the student has unticked rather than deleted', () => {
+    const before = course('ECON 101', [ev({ id: 'a', title: 'Quiz' }), ev({ id: 'b', date: '2026-10-01', title: 'Essay' })])
+    const first = planForAll([before], state())
+    const after = course('ECON 101', [ev({ id: 'a', title: 'Quiz' }), ev({ id: 'b', date: '2026-10-01', title: 'Essay', include: false })])
+    const one = planForCourse(after, state({ courses: [after], lastExport: first.entries, exportSequence: 1 }))
+    expect(one.cancelled).toBe(1)
+    expect(one.ics).toContain(`UID:${eventUid('ECON 101', { date: '2026-10-01', title: 'Essay' })}`)
+  })
+
+  it('leaves an entry saved before the class tag existed alone', () => {
+    // A history row written by an older build carries no tag, so no class can claim it. A full
+    // export still withdraws it; a per-class file must not guess.
+    const c = course('ECON 101', [ev({ id: 'a', title: 'Quiz' })])
+    const legacy = { uid: 'oldrow@syllabify.app', date: '2026-10-01', summary: '' }
+    const one = planForCourse(c, state({ courses: [c], lastExport: [legacy], exportSequence: 1 }))
+    expect(one.cancelled).toBe(0)
+    expect(one.ics).not.toContain('STATUS:CANCELLED')
+  })
+})
+
+describe('mergeHistory', () => {
+  it('replaces the exported class\'s rows rather than piling onto them', () => {
+    const before = course('ECON 101', [ev({ id: 'a', title: 'Quiz' }), ev({ id: 'b', date: '2026-10-01', title: 'Essay' })])
+    const psyc = course('PSYC 101', [ev({ id: 'c', date: '2026-11-02', title: 'Paper' })])
+    const first = planForAll([before, psyc], state())
+    expect(first.entries).toHaveLength(3)
+
+    // ECON loses a row, and only ECON is downloaded.
+    const after = course('ECON 101', [ev({ id: 'a', title: 'Quiz' })])
+    const st = state({ courses: [after, psyc], lastExport: first.entries, exportSequence: 1 })
+    const one = planForCourse(after, st)
+    const history = mergeHistory(st.lastExport, one.entries, courseTag('ECON 101'))
+
+    // The withdrawn row is gone from the history, PSYC is untouched, and nothing doubled up.
+    expect(history).toHaveLength(2)
+    expect(history.some((e) => e.uid === eventUid('ECON 101', { date: '2026-10-01', title: 'Essay' }))).toBe(false)
+    expect(history.some((e) => e.uid === eventUid('PSYC 101', { date: '2026-11-02', title: 'Paper' }))).toBe(true)
+
+    // And the next export of the same class does not cancel it a second time.
+    const again = planForCourse(after, state({ courses: [after, psyc], lastExport: history, exportSequence: 2 }))
+    expect(again.cancelled).toBe(0)
+  })
+
+  it('keeps every class when no class is named', () => {
+    const a = { uid: 'a@syllabify.app', date: '2026-09-14', summary: 'X', courseTag: courseTag('ECON 101') }
+    const b = { uid: 'b@syllabify.app', date: '2026-09-15', summary: 'Y', courseTag: courseTag('PSYC 101') }
+    expect(mergeHistory([a, b], []).map((e) => e.uid).sort()).toEqual(['a@syllabify.app', 'b@syllabify.app'])
   })
 })
 

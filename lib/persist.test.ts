@@ -217,7 +217,7 @@ describe('everything a student can save survives a reload', () => {
     reminder: 'morning',
     step: 2,
     activeCourseId: 'c1',
-    lastExport: [{ uid: 'abc123@syllabify.app', date: '2026-12-09', summary: 'Final paper' }],
+    lastExport: [{ uid: 'abc123@syllabify.app', date: '2026-12-09', summary: 'Final paper', courseTag: '0f1e2d3c4b5a6978' }],
     exportSequence: 3,
   }
 
@@ -229,5 +229,16 @@ describe('everything a student can save survives a reload', () => {
     expect(save(full)).toBe(true)
     expect(load()).toEqual(full)
     localStorage.removeItem(STORAGE_KEY)
+  })
+
+  it('drops a class tag that is not a hash, keeping the calendar identity', () => {
+    const bent = {
+      ...full,
+      lastExport: [{ uid: 'abc123@syllabify.app', date: '2026-12-09', summary: 'Final paper', courseTag: 'ECON 101' }],
+    }
+    const back = sanitize(JSON.parse(JSON.stringify(bent)))
+    expect(back?.lastExport).toHaveLength(1)
+    expect(back?.lastExport[0].courseTag).toBeUndefined()
+    expect(back?.lastExport[0].uid).toBe('abc123@syllabify.app')
   })
 })

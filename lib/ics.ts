@@ -1,4 +1,4 @@
-import { eventUid, meetingUid } from './uid'
+import { courseTag, eventUid, meetingUid } from './uid'
 
 export type CalendarEvent = {
   id: string
@@ -42,7 +42,13 @@ export type Weekday = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'
 export type CourseEvents = { name: string; events: CalendarEvent[]; meeting?: Meeting | null }
 
 /** One line of the previous export, kept so a later export can withdraw what is gone. */
-export type ExportedEntry = { uid: string; date: string; summary: string }
+export type ExportedEntry = {
+  uid: string
+  date: string
+  summary: string
+  /** Which class put this on the calendar, as an opaque tag. Absent on rows saved before it existed. */
+  courseTag?: string
+}
 
 export type BuildOptions = {
   /** Bumped on every export. Calendar apps ignore a repeat UID unless SEQUENCE has grown. */
@@ -207,12 +213,13 @@ export function summaryFor(courseName: string, title: string) {
 export function exportedEntries(courses: CourseEvents[]): ExportedEntry[] {
   const out: ExportedEntry[] = []
   for (const course of courses) {
+    const tag = courseTag(course.name)
     for (const ev of course.events) {
       if (!usableEvent(ev)) continue
-      out.push({ uid: eventUid(course.name, ev), date: ev.date, summary: summaryFor(course.name, ev.title) })
+      out.push({ uid: eventUid(course.name, ev), date: ev.date, summary: summaryFor(course.name, ev.title), courseTag: tag })
     }
     if (usableMeeting(course.meeting)) {
-      out.push({ uid: meetingUid(course.name), date: course.meeting.firstDate, summary: course.name })
+      out.push({ uid: meetingUid(course.name), date: course.meeting.firstDate, summary: course.name, courseTag: tag })
     }
   }
   return out
