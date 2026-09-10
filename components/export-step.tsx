@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch } from
 import { REMINDERS, type Reminder } from '@/lib/ics'
 import type { Action, State } from '@/lib/store'
 import { exportable, exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
+import { courseTag } from '@/lib/uid'
 import { previewRows } from './date-preview'
 import { Confetti } from './confetti'
 import { ArtCrop } from './hero-art'
@@ -316,7 +317,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                       onClick={() => {
                         const one = planForCourse(c, state)
                         saveFile(one.ics, fileNameFor(c))
-                        dispatch({ type: 'recordExport', entries: mergeHistory(state.lastExport, one.entries) })
+                        dispatch({ type: 'recordExport', entries: mergeHistory(state.lastExport, one.entries, courseTag(c.name)) })
                         setMenu(false)
                         setDone(`${fileNameFor(c)} is in your Downloads.`)
                         setCelebrate((n) => n + 1)

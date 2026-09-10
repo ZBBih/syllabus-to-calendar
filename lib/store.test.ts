@@ -401,6 +401,8 @@ describe('starting over leaves no titles behind', () => {
     const after = reducer(withHistory(), { type: 'clear' })
     expect(after.lastExport.map((e) => e.uid)).toEqual(['a1@syllabify.app', 'b2@syllabify.app'])
     expect(after.lastExport.map((e) => e.date)).toEqual(['2026-12-09', '2026-10-14'])
+    // The class tag goes with the titles: nothing left behind names what was being studied.
+    expect(after.lastExport.map((e) => e.courseTag)).toEqual([undefined, undefined])
   })
 
   it('keeps the export sequence rising so the calendar accepts the correction', () => {

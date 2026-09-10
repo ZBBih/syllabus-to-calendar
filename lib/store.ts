@@ -261,9 +261,13 @@ export function reducer(state: State, action: Action): State {
       // The titles go, though. A withdrawal is matched by UID alone, so the summary carries
       // nothing the calendar needs — and a student who starts over on a library machine should
       // not leave a readable list of what they were studying and when it was due behind them.
+      //
+      // The class tag goes with them. It is only there so a per-class file can withdraw its own
+      // rows, and there are no classes left to export one for; a bare hash of a course code is
+      // guessable from a course catalogue, which is exactly what this is meant to prevent.
       return {
         ...initialState(),
-        lastExport: state.lastExport.map((e) => ({ ...e, summary: '' })),
+        lastExport: state.lastExport.map((e) => ({ ...e, summary: '', courseTag: undefined })),
         exportSequence: state.exportSequence,
       }
     case 'reset':

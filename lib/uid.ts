@@ -40,6 +40,18 @@ export function eventUid(courseName: string, e: Pick<CalendarEvent, 'date' | 'ti
   return `${hash(seed)}@${UID_DOMAIN}`
 }
 
+/**
+ * An opaque stand-in for a class name, used to tell whose row is whose in the export history.
+ *
+ * A per-class file may only withdraw its own class, which means the history has to record what
+ * each row belonged to. It records this rather than the name: the name is already in state in
+ * plain text while the class is loaded, so the tag gives nothing away that is not already
+ * there, and Start over blanks it alongside the summaries so nothing readable is left behind.
+ */
+export function courseTag(courseName: string): string {
+  return hash(norm(courseName))
+}
+
 export function meetingUid(courseName: string): string {
   return `${hash(`meeting ${norm(courseName)}`)}@${UID_DOMAIN}`
 }

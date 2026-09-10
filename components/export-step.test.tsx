@@ -4,7 +4,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { ExportStep, defaultTab } from './export-step'
 import type { State } from '@/lib/store'
 import { SITE_URL } from '@/lib/site'
-import { eventUid } from '@/lib/uid'
+import { courseTag, eventUid } from '@/lib/uid'
 
 afterEach(cleanup)
 
@@ -134,6 +134,46 @@ describe('ExportStep', () => {
     render(<ExportStep state={empty} dispatch={() => {}} />)
     expect(screen.getByText(/nothing to export yet/i)).toBeTruthy()
     expect((screen.getByRole('button', { name: /add to my calendar/i }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  /*
+    The per-class file used to withdraw nothing at all, so a row deleted since the last export
+    stayed on the calendar until a full export went out. The export history now records which
+    class each row came from, as an opaque tag, so one class can be taken back on its own.
+  */
+  it('withdraws this class\'s deleted row without touching the other class', async () => {
+    const [quiz, essay] = base.courses[0].events
+    const psyc = { ...base.courses[1], name: 'PSYC 200' }
+    const paper = psyc.events[0]
+    // Both classes went out last time. ECON has since lost its essay.
+    const state: State = {
+      ...base,
+      exportSequence: 1,
+      courses: [{ ...base.courses[0], events: [quiz] }, psyc],
+      lastExport: [
+        { uid: eventUid('ECON 101', quiz), date: quiz.date, summary: 'ECON 101: Quiz', courseTag: courseTag('ECON 101') },
+        { uid: eventUid('ECON 101', essay), date: essay.date, summary: 'ECON 101: Essay', courseTag: courseTag('ECON 101') },
+        { uid: eventUid('PSYC 200', paper), date: paper.date, summary: 'PSYC 200: Lab', courseTag: courseTag('PSYC 200') },
+      ],
+    }
+    const blobs: Blob[] = []
+    Object.assign(URL, { createObjectURL: vi.fn((b: Blob) => { blobs.push(b); return 'blob:x' }), revokeObjectURL: vi.fn() })
+    const dispatch = vi.fn()
+    render(<ExportStep state={state} dispatch={dispatch} />)
+    fireEvent.click(screen.getByRole('button', { name: /just one class/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'ECON 101' }))
+
+    const ics = await blobs[0].text()
+    expect(ics).toContain('STATUS:CANCELLED')
+    expect(ics).toContain(`UID:${eventUid('ECON 101', essay)}`)
+    // The other class was not in this file, so nothing of its own may appear in it.
+    expect(ics).not.toContain(`UID:${eventUid('PSYC 200', paper)}`)
+
+    // And the history drops the withdrawn row while keeping the other class, so the next
+    // export does not cancel it a second time.
+    const recorded = dispatch.mock.calls.find((c) => c[0].type === 'recordExport')?.[0].entries as State['lastExport']
+    expect(recorded.map((e) => e.uid)).toContain(eventUid('PSYC 200', paper))
+    expect(recorded.map((e) => e.uid)).not.toContain(eventUid('ECON 101', essay))
   })
 
   it('downloads one class from the menu using a slug file name', () => {

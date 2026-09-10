@@ -1,4 +1,5 @@
 import { buildIcs, exportedEntries, type CalendarEvent, type ExportedEntry, type Reminder } from './ics'
+import { courseTag } from './uid'
 import type { Course, State } from './store'
 
 /** True when a row is complete enough to land in the calendar file. */
@@ -71,16 +72,19 @@ export type ExportPlan = {
   created: number
 }
 
-function plan(courses: Course[], state: State, subset?: ExportedEntry[]): ExportPlan {
+function plan(courses: Course[], state: State, only?: string): ExportPlan {
   const shaped = courses.map(exportable)
   const entries = exportedEntries(shaped)
   const previous = new Set(state.lastExport.map((e) => e.uid))
-  // A per-class file must not withdraw the other classes, so cancellations only apply to a full export.
+  // A per-class file may only withdraw its own class, so it is matched against that class's
+  // slice of the history and no more. A row saved before the tag existed carries none, so no
+  // class can claim it and only a full export takes it off the calendar.
+  const history = only ? state.lastExport.filter((e) => e.courseTag === only) : state.lastExport
   // With nothing ticked the student is asking for the whole thing back, which includes rows this
   // browser never exported itself: the calendar knows them by the same content-hashed id.
   const retraction =
-    !subset && entries.length === 0 ? exportedEntries(state.courses.filter((c) => c.name.trim()).map(retractable)) : []
-  const cancelled = subset ? [] : byUid([...withdrawn(state.lastExport, entries), ...retraction])
+    !only && entries.length === 0 ? exportedEntries(state.courses.filter((c) => c.name.trim()).map(retractable)) : []
+  const cancelled = byUid([...withdrawn(history, entries), ...retraction])
   return {
     ics: buildIcs(shaped, state.reminder, { sequence: state.exportSequence, cancelled }),
     entries,
@@ -95,12 +99,19 @@ export function planForAll(courses: Course[], state: State): ExportPlan {
 }
 
 export function planForCourse(course: Course, state: State): ExportPlan {
-  return plan([course], state, [])
+  return plan([course], state, courseTag(course.name))
 }
 
-/** Merge a per-class export into the recorded history without dropping the other classes. */
-export function mergeHistory(previous: ExportedEntry[], added: ExportedEntry[]): ExportedEntry[] {
-  const byUid = new Map(previous.map((e) => [e.uid, e]))
+/**
+ * Merge a per-class export into the recorded history without dropping the other classes.
+ *
+ * Given the class's tag, that class's old rows are replaced rather than added to: the file just
+ * saved is the whole truth about that class, so a row it withdrew has to leave the history too.
+ * Left in, it would be cancelled again by every export that followed.
+ */
+export function mergeHistory(previous: ExportedEntry[], added: ExportedEntry[], only?: string): ExportedEntry[] {
+  const kept = only ? previous.filter((e) => e.courseTag !== only) : previous
+  const byUid = new Map(kept.map((e) => [e.uid, e]))
   for (const e of added) byUid.set(e.uid, e)
   return [...byUid.values()]
 }
