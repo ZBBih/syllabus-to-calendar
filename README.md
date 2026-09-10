@@ -4,6 +4,15 @@ Drop your syllabi and get every deadline on your calendar. Runs entirely in your
 
 Live: https://syllabify-app.vercel.app
 
+![The landing page reading a syllabus line by line: the raw text on the left, the dated rows landing on the right, with the weekly class and the grading table underneath](docs/media/demo.png)
+
+The front page does not describe the reader, it runs it. That panel imports the same
+`lib/extract.ts` the app uses, plays it over the sample syllabus at reading speed, and shows what
+comes back: the dates, the multi-day range kept as a range, the weekly meeting, and the grading
+table. It cannot drift from the product, because it is the product.
+
+<!-- A screen recording of a real file going in belongs here, above "Where this sits". -->
+
 ## Where this sits
 
 Every comparable product asks for an account, uploads your syllabus to a server, and starts charging around the third or fourth class. Several are Apple-only. Syllabify is the one that does none of that, which is the whole positioning: **no account, nothing uploaded, no class limit, free.**
@@ -16,7 +25,18 @@ Three guided steps, one screen at a time, built for a phone or a laptop.
 
 1. **Upload.** Drop all your syllabi on the big zone. PDF, Word, plain text, a screenshot, or a photo of the printed page. Each file becomes a class row with its name guessed from the file name, a term picker, and a count of the dates found. A weekly meeting in the header ("MWF 10:00-10:50 in Olin 204") becomes a repeating calendar event, and a grading table becomes the grade calculator. Every class with dates needs a name before you can continue. **Add by pasting** types a class in by hand, and **Try a sample** shows the whole thing working.
 2. **Review.** One tab per class. Rows the app is unsure about are amber; a **Needs check** filter shows only those. Re-reading a syllabus produces a **what changed** panel listing what moved, what was added, and what the new file no longer mentions. **All classes by date** shows every deadline in one list. On a phone each row is a card, no sideways scrolling.
-3. **Export.** Pick a reminder lead. Each event carries the original syllabus line as its description. A callout flags days with two or more things due, and on a repeat export you are told how many events will be corrected, added, and withdrawn. On a phone, **Send to my calendar** opens the share sheet. Anywhere, **Download all** gives `syllabify.ics`. Import guides for Google, Apple, and Outlook are right there.
+3. **Export.** Pick a reminder lead. Each event carries the original syllabus line as its description. A callout flags days with two or more things due, and on a repeat export you are told how many events will be corrected, added, and withdrawn. **Add to my calendar** opens the share sheet where there is one and downloads `syllabify.ics` where there is not. Import guides for Google, Apple, and Outlook are right there, and with more than one class loaded **Just one class** exports a single class on its own.
+
+![The review step: one editable row per deadline, a date, a time, a title, a tick that decides whether it exports, and a second date on the row that spans two days](docs/media/review.png)
+
+Nothing is taken on trust. Every row is editable, every row can be unticked, and the ones the
+reader was unsure about are amber with a filter that shows only those.
+
+<p align="center">
+  <img src="docs/media/export-phone.png" width="320" alt="The export step on a phone: one button that opens the share sheet, a reminder picker, and import guides for Google, Apple and Outlook">
+</p>
+
+<p align="center"><em>The export step on a phone, which is half of where this gets used.</em></p>
 
 Your work is saved in your browser and the app is installable as a PWA that opens offline. Light or dark: the first visit matches your system, and the switch in the header remembers your choice.
 
@@ -63,11 +83,13 @@ Next.js 16 (App Router), React 19, Tailwind v4, [chrono-node](https://github.com
 - `lib/ics.ts` turns events into an iCalendar file, including cancellations
 - `lib/export.ts` builds an export plan: the file, what it updates, adds, and withdraws
 - `lib/meeting.ts` weekly class meeting detection
-- `lib/store.ts` reducer and localStorage persistence
+- `lib/store.ts` the reducer; `lib/persist.ts` reading and writing the saved semester
+- `components/extract-demo.tsx` the landing page's demonstration, driven by the real extractor
 - `components/` the landing page, the three step screens, artwork, stepper, class row, change summary, grade panel, paste sheet, confetti, theme control, icons, by-date preview
 - `app/manifest.ts`, `public/sw.js` PWA manifest and offline shell cache
 - `app/icon.svg`, `app/apple-icon.tsx`, `app/opengraph-image.tsx` favicon and link-preview image
 - `scripts/vendor-ocr.mjs` copies the recogniser's runtime files into `public/`
-- `lib/art.ts` the illustration's geometry; `components/art.tsx` draws it
+- `lib/art.ts` the illustration's geometry; `components/hero-art.tsx` draws it
 - `docs/illustration.md` the artwork: what it says, why it is drawn rather than rendered
+- `docs/media/` the screenshots this file uses
 - `docs/reviews/` improvement reviews and the competitor audit
