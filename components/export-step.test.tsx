@@ -126,6 +126,31 @@ describe('ExportStep on an iPhone', () => {
     expect(blobs[0].type).toBe('text/calendar;charset=utf-8')
   })
 
+  /*
+    The route and the instructions must never disagree. A Mac opens the Apple tab too, so keying
+    the phone steps off the tab would promise Add All to a machine that gets a download — and if
+    the phone check ever answered wrongly, it would promise it to a phone that gets a share sheet.
+  */
+  it('only promises Add All to a device actually taking that route', () => {
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    // A real Mac: Apple tab, but the download route, so it must not be told about Add All.
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)',
+      configurable: true,
+    })
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true })
+    render(<ExportStep state={base} dispatch={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /apple calendar/i })).toBeTruthy()
+    expect(screen.queryByText(/Add All/)).toBeNull()
+    expect(screen.getByText(/double-click syllabify\.ics/i)).toBeTruthy()
+    cleanup()
+
+    // The same tab on a phone does get the Add All steps.
+    asIPhone()
+    render(<ExportStep state={base} dispatch={vi.fn()} />)
+    expect(screen.getAllByText(/Add All/).length).toBeGreaterThan(0)
+  })
+
   it('names Add All in the instructions, because that is the button the phone shows', () => {
     asIPhone()
     Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })

@@ -20,12 +20,10 @@ const GUIDES = {
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone or iPad: tap "Add to my calendar" above. Your phone shows its own list of the dates with an "Add All" button at the top right.',
-    'Tap "Add All". The button disappears once the dates are in, and that is the only confirmation your phone gives — it does not say anything or take you anywhere. Close the list with the check mark at the top left to come back here.',
-    'Nothing gets saved to Files and nothing else has to be installed. If you want the file itself as well, use "Or send the file somewhere else" under the button.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
     'iCloud syncs it to every Apple device, so importing once on a Mac puts it on your phone too.',
+    'On iPhone: tap "Add to my calendar" above, then "Save to Files". Open the Files app and tap syllabify.ics. If your phone offers to add the events, accept it.',
   ],
   Outlook: [
     'Outlook on the web: open the calendar, click "Add calendar", then "Upload from file".',
@@ -34,6 +32,21 @@ const GUIDES = {
     'Outlook for Mac: File > Import and choose the file.',
   ],
 } as const
+/**
+ * What an iPhone is actually told to do, kept apart from the Mac's steps.
+ *
+ * These are shown on the strength of the same check that picks the route, not on which guide tab
+ * is open. A Mac lands on the Apple tab too, and if the check ever answered wrongly on a real
+ * phone the student would be promised a screen they never see. This copy has shipped untrue
+ * twice; it is not going to be able to do it again by disagreeing with the button beside it.
+ */
+const APPLE_PHONE_GUIDE = [
+  'Tap "Add to my calendar" above. Your phone shows its own list of the dates with an "Add All" button at the top right.',
+  'Tap "Add All". The button disappears once the dates are in, and that is the only confirmation your phone gives — it does not say anything or take you anywhere. Close the list with the check mark at the top left to come back here.',
+  'Nothing gets saved to Files and nothing else has to be installed. If you want the file itself as well, use "Or send the file somewhere else" under the button.',
+  'On a Mac instead: double-click syllabify.ics in Downloads, pick a calendar, click OK. iCloud syncs it to your phone.',
+]
+
 type Tab = keyof typeof GUIDES
 
 const canShareFiles = () => {
@@ -478,7 +491,7 @@ export function ExportStep({
           ))}
         </div>
         <ol key={tab} className="stagger mt-4 list-decimal space-y-2 pl-5 text-sm">
-          {GUIDES[tab].map((step) => (
+          {(tab === 'Apple' && appleMobile ? APPLE_PHONE_GUIDE : GUIDES[tab]).map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
