@@ -20,7 +20,8 @@ const GUIDES = {
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone or iPad: tap "Add to my calendar" above. Your phone shows its own list of the dates with an "Add All" button at the top. Tap that and you are done.',
+    'On iPhone or iPad: tap "Add to my calendar" above. Your phone shows its own list of the dates with an "Add All" button at the top right.',
+    'Tap "Add All". The button disappears once the dates are in, and that is the only confirmation your phone gives — it does not say anything or take you anywhere. Close the list with the check mark at the top left to come back here.',
     'Nothing gets saved to Files and nothing else has to be installed. If you want the file itself as well, use "Or send the file somewhere else" under the button.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
@@ -203,10 +204,13 @@ export function ExportStep({
       record(plan.entries)
       // Set before leaving so that a phone which restores this page from its back-forward cache
       // brings the student back to the finished screen rather than to the button again.
+      // Deliberately short of claiming success. The import screen is Apple's, not ours: it reports
+      // nothing back, so the app cannot tell Add All from a student who backed out. Saying every
+      // date is on the calendar would be a lie half the time it was read.
       setDone(
         withdrawing
-          ? 'Your calendar has dropped those events.'
-          : 'Every date is on your calendar. Reminders are set.',
+          ? 'Your phone has the list. If you tapped Add All, those events are off your calendar now.'
+          : 'Your phone has the dates. If you tapped Add All, they are in your calendar with reminders set.',
       )
       setCelebrate((n) => n + 1)
       openCalendarFile(plan.ics)
@@ -371,12 +375,12 @@ export function ExportStep({
                 <p className="max-w-sm text-xs leading-relaxed text-muted">
                   {withdrawing
                     ? appleMobile
-                      ? 'Opens the same list your phone showed when you imported. Tap Add All and those events come off.'
+                      ? 'Opens your phone\u2019s own list. Tap Add All at the top, then close the list with the check mark.'
                       : canShare
                         ? 'Opens your share sheet. Save it to Files, then open it the same way you imported.'
                         : 'Saves one file. Opening it clears those events from your calendar.'
                     : appleMobile
-                      ? 'Opens your phone\u2019s own list of the dates. Tap Add All and they are in your calendar.'
+                      ? 'Opens your phone\u2019s own list of the dates. Tap Add All at the top, then close the list with the check mark.'
                       : canShare
                         ? 'Opens your share sheet. Save it to Files, then open it to add every date.'
                         : 'Saves one file. Opening it imports every date at once.'}

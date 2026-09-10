@@ -131,7 +131,24 @@ describe('ExportStep on an iPhone', () => {
     Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
     render(<ExportStep state={base} dispatch={vi.fn()} />)
     expect(screen.getByText(/tap add all/i)).toBeTruthy()
+    // The old route told them to save the file first. That is no longer how they get there.
     expect(screen.queryByText(/save to files/i)).toBeNull()
+  })
+
+  /*
+    The import screen belongs to Apple and reports nothing back, so the app cannot tell a student
+    who tapped Add All from one who backed out. It has to stop short of claiming the events
+    landed; this app's phone instructions have twice shipped saying something that was not true.
+  */
+  it('does not claim the events landed, because it cannot know that they did', () => {
+    asIPhone()
+    Object.assign(URL, { createObjectURL: vi.fn(() => 'blob:x'), revokeObjectURL: vi.fn() })
+    vi.spyOn(nav, 'go').mockImplementation(() => {})
+    render(<ExportStep state={base} dispatch={vi.fn()} persistNow={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /add to my calendar/i }))
+    const done = screen.getByText(/if you tapped add all/i)
+    expect(done).toBeTruthy()
+    expect(done.textContent).not.toMatch(/^every date is on your calendar/i)
   })
 
   it('keeps a way to send the file elsewhere, which is the route to a computer', () => {
