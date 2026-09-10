@@ -70,10 +70,19 @@ const CLOCK = /\d\s*(?::\s*\d|[ap]\.?m\.?)/i
 // is real, so the row is still offered — it just arrives unticked rather than pre-approved.
 const SENTENCE_MIN = 80
 
+// A date on its own line takes the line below it as its title. Past this length that line is
+// a paragraph rather than a schedule cell, and the pairing stops being obvious.
+const BORROW_MAX = 60
+
 // A title is what a student reads in a calendar row. Past this length the line is prose that
 // happened to carry a date, not a schedule entry, so it is cut to something readable and
 // flagged for a look. The untouched line stays on the event as its source.
 const TITLE_MAX = 120
+
+/** Whether a line carries a date of its own, as opposed to only a time or no date at all. */
+function hasDate(line: string, ref: Date): boolean {
+  return chrono.parse(line, ref, { forwardDate: true }).some((r) => r.start.isCertain('month') && r.start.isCertain('day'))
+}
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -152,6 +161,8 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
   const found: ExtractedEvent[] = []
   const report: ReadLine[] = lines.map((text) => ({ text, captured: [], skipped: [] }))
+  // Index of a line already spent as some other row's title, so two dates cannot claim it.
+  let usedAsTitle = -1
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].replace(WEEK_PREFIX, '')
@@ -205,21 +216,41 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
 
     let confidence: 'high' | 'low' = 'high'
     let reason: string | undefined
-    if (!title && i + 1 < lines.length && chrono.parse(lines[i + 1], ref).length === 0) {
+    let prose = false
+    let borrowed = 0
+    // A date alone on a line takes its title from a neighbour. The line below comes first,
+    // which is how a schedule table reads; a line that only names a time is still a title
+    // ("Final Exam Session (Class meets 7 pm - 9:50 pm)"), so only a date rules it out. Some
+    // tables put the deadline above its date instead, and looking only down the page left
+    // those rows nameless, which means unable to reach a calendar at all.
+    if (!title && i + 1 < lines.length && !hasDate(lines[i + 1], ref)) {
       title = cleanTitle(lines[i + 1])
+      i += 1
+      borrowed = 1
+    } else if (!title && i > 0 && i - 1 !== usedAsTitle && !hasDate(lines[i - 1], ref)) {
+      title = cleanTitle(lines[i - 1])
+      borrowed = -1
+    }
+    if (borrowed === 1) usedAsTitle = i
+    // A short neighbour is a schedule cell, and that pairing is right every time on the
+    // syllabi written this way. Flagging all of them made "Needs check" list most of the
+    // term. A paragraph beside the date is the shape that really is a guess, and that one
+    // still asks to be looked at.
+    if (borrowed !== 0 && title.length > BORROW_MAX) {
       confidence = 'low'
       reason = 'date only'
-      i += 1
     }
     if (title.length < 3) {
       confidence = 'low'
       reason = reason ?? 'no title found'
+      // Nothing without a title can reach a calendar, so a ticked box here promises an export
+      // that will not happen. The row stays, with its date, for the student to name.
+      prose = true
     }
     // A schedule table whose Notes column holds a page of boilerplate arrives as one line once
     // the PDF is flattened: a real date cell, then prose. The date is worth keeping and the
     // title is not, and there is no way to tell from the text which half the student wants —
     // so the row is offered rather than taken. It stays visible and one tap from included.
-    let prose = false
     // A sentence long enough to be prose, with the date buried inside it rather than leading
     // it. On the syllabus that prompted this, twenty-two such rows arrived ticked and none
     // were flagged, which is a paragraph of the document landing on a student's calendar.
@@ -241,7 +272,7 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
     // a single date to give it to: "Sept 9 / Sept 11, both due 5pm" is the rare shape, and
     // guessing wrong there puts a deadline at the wrong hour.
     const lineTime = inTerm.length === 1 ? results.find((x) => x.start.isCertain('hour') && CLOCK.test(x.text))?.start : undefined
-    const source = lines[i - (reason === 'date only' ? 1 : 0)]
+    const source = lines[i - (borrowed === 1 ? 1 : 0)]
 
     for (const r of inTerm) {
       const start = r.start.date()
@@ -257,7 +288,7 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       found.push({ id: newId(), date: iso(start), endDate, time, title, confidence, reason, include: !prose, origDate: iso(start), origTitle: title, source })
       // A date-only line borrows the next line's title, so the capture belongs to the line the
       // date was on, which is where the student will look for it.
-      report[i - (reason === 'date only' ? 1 : 0)].captured.push({ date: iso(start), endDate, time, title })
+      report[i - (borrowed === 1 ? 1 : 0)].captured.push({ date: iso(start), endDate, time, title })
     }
   }
 

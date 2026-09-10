@@ -40,4 +40,26 @@ describe('detectMeeting', () => {
     const m = detectMeeting('BIOL 210\nOffice Hours: Mondays 9:00-10:00\nClass: Tuesdays and Thursdays 2:00-3:15 pm', fall)!
     expect(m).toMatchObject({ days: ['TU', 'TH'], start: '14:00', end: '15:15' })
   })
+
+  /**
+   * From a second real syllabus (UCF MAR 4418). The header labels each field on its own line
+   * and writes a Monday class as the single letter M, which nothing recognised, so the first
+   * time range in the document won — the professor's office hours, on the line under their
+   * label. The student got a weekly 4:45pm event that is not their class, fifteen times.
+   */
+  it('reads a one-day class written as a single letter after the label', () => {
+    const text = [
+      'Course Information',
+      'Term: Fall 2026',
+      'Class Meeting Days: M',
+      'Class Meeting Time: 06:00PM - 08:50PM',
+      'Class Meeting Location: BA2 0210',
+    ].join('\n')
+    expect(detectMeeting(text, fall)).toMatchObject({ days: ['MO'], start: '18:00', end: '20:50' })
+  })
+
+  it('does not take office hours listed under their own heading', () => {
+    const text = ['Office Hours', 'Mondays 4:45 pm - 5:45 pm', '', 'Wednesdays 9:45 am - 11:45 am'].join('\n')
+    expect(detectMeeting(text, fall)).toBeNull()
+  })
 })

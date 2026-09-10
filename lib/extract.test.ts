@@ -34,7 +34,7 @@ describe('extractEvents', () => {
 
   it('date-only line takes next line as title', () => {
     const [e] = extractEvents('Nov 3\nEssay due', fall)
-    expect(e).toMatchObject({ date: '2026-11-03', title: 'Essay due', confidence: 'low', reason: 'date only' })
+    expect(e).toMatchObject({ date: '2026-11-03', title: 'Essay due', confidence: 'high' })
   })
 
   it('spring term resolves into the spring year', () => {
@@ -209,7 +209,8 @@ describe('a row whose title is boilerplate does not export itself', () => {
   })
 
   it('leaves every other kind of row ticked, including the ones that only need a look', () => {
-    const rows = extractEvents('Sept 14: Quiz 1\nOct 2\nStrengthen Your Skills: 5', fall)
+    const long = 'Oct 2\nA whole paragraph of notes sits under this date and there is no telling whether it is the title of anything.'
+    const rows = extractEvents(`Sept 14: Quiz 1\n${long}`, fall)
     expect(rows.every((e) => e.include !== false)).toBe(true)
     expect(rows.some((e) => e.reason === 'date only')).toBe(true)
   })
@@ -321,5 +322,58 @@ describe('readReport agrees with the rows the student gets', () => {
   it('does not offer a course code as a date it left out', () => {
     const [line] = readReport('MAR3613 Marketing Research', fall)
     expect(line.skipped).toEqual([])
+  })
+})
+
+/**
+ * From the second real syllabus (UCF MAR 4418), whose schedule runs down the page as a date
+ * on one line and its topic on the next. Every one of the fifteen class sessions came back
+ * amber, so "Needs check" listed 21 of 27 rows and stopped meaning anything.
+ */
+describe('extractEvents on a schedule read down the page', () => {
+  it('trusts a short title on the line under the date', () => {
+    const [e] = extractEvents('Mon, Aug 24\nCourse Introduction', fall)
+    expect(e).toMatchObject({ date: '2026-08-24', title: 'Course Introduction', confidence: 'high' })
+  })
+
+  it('still asks about a paragraph on the line under the date', () => {
+    const long = 'This session covers the whole of the recruiting unit and you should come having read the chapter and prepared your notes.'
+    const [e] = extractEvents(`Mon, Aug 24\n${long}`, fall)
+    expect(e.confidence).toBe('low')
+  })
+
+  it('takes the line under the date even when that line names a time', () => {
+    const [e] = extractEvents('Mon, Dec 7\nFinal Exam Session (Class meets 7 pm - 9:50 pm)', fall)
+    expect(e.date).toBe('2026-12-07')
+    expect(e.title).toContain('Final Exam Session')
+  })
+
+  /**
+   * The same table sometimes puts the deadline above its date: "Quiz Chapter 4 due" on one
+   * line and "6 pm Friday, Sep 4" on the next. Only looking down the page left that row with
+   * no title, which meant it could not export at all.
+   */
+  it('takes the line above when the date sits alone under it', () => {
+    const [e] = extractEvents('Read Chapters 4 & 5\nQuiz Chapter 4 due\n6 pm Friday, Sep 4', fall)
+    expect(e).toMatchObject({ date: '2026-09-04', time: '18:00', title: 'Quiz Chapter 4 due' })
+  })
+
+  it('does not hand the same line to two dates as a title', () => {
+    const rows = extractEvents('Nov 3\nEssay due\nNov 10', fall)
+    expect(rows.map((e) => [e.date, e.title])).toEqual([
+      ['2026-11-03', 'Essay due'],
+      ['2026-11-10', ''],
+    ])
+  })
+
+  /**
+   * A row with no title cannot go on a calendar at all — the export drops it — so leaving it
+   * ticked tells the student it is going when it is not.
+   */
+  it('does not tick a row it could find no title for', () => {
+    // Dates stacked with nothing between them: neither neighbour can lend a name.
+    const rows = extractEvents('Nov 3\nNov 10', fall)
+    expect(rows.map((e) => e.title)).toEqual(['', ''])
+    expect(rows.every((e) => e.include === false)).toBe(true)
   })
 })
