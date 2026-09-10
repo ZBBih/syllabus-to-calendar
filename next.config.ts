@@ -11,6 +11,16 @@ const csp = [
   // 'wasm-unsafe-eval' is what lets the on-device text recogniser instantiate its WebAssembly
   // core. It permits WebAssembly compilation only, not eval of JavaScript, so the page still
   // cannot run injected script.
+  //
+  // 'unsafe-inline' is deliberate, and it is here in production rather than only in development.
+  // Two inline scripts are unavoidable: the App Router writes its own hydration payload inline
+  // on every response, and `app/layout.tsx` runs a small script in the head to set the theme
+  // before the first paint, which is the only way to avoid a flash of the wrong one. The way to
+  // drop the directive is a per-request nonce, and a nonce needs middleware — which makes every
+  // response dynamic and costs the fully static build and the offline shell that depends on it.
+  // That is a worse trade for a page with no server, no accounts and no third-party script: the
+  // stored-content sinks are all React text nodes, `connect-src 'self'` blocks exfiltration, and
+  // nothing on this origin is fetched from anywhere else. Revisit if a nonce ever becomes free.
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self'",
   "img-src 'self' data: blob:",
