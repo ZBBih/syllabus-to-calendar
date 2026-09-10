@@ -241,6 +241,16 @@ body {
     transform: translateY(-4px);
   }
 }
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
 
 @layer components {
   /* Display type is a serif at one weight, so size and spacing carry the hierarchy. */
@@ -416,6 +426,16 @@ body {
   }
   .float {
     animation: float-y 4s ease-in-out infinite;
+  }
+
+  /* The reader's cursor on the landing-page demonstration, while lines are still arriving. */
+  .caret {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.95rem;
+    vertical-align: text-bottom;
+    background: var(--accent);
+    animation: caret-blink 1.1s steps(1, end) infinite;
   }
 
   /*
@@ -648,6 +668,7 @@ body {
     .hero-art .art-cell,
     .crop-in,
     .arrow-nudge,
+    .caret,
     .draw-check path {
       animation: none !important;
     }
