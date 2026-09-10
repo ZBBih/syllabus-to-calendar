@@ -214,3 +214,94 @@ describe('a row whose title is boilerplate does not export itself', () => {
     expect(rows.some((e) => e.reason === 'date only')).toBe(true)
   })
 })
+
+/**
+ * Every case here came from one real syllabus (UCF MAR3613, Fall 2026), which produced 52 rows
+ * of which 22 were sentences from the prose. The dates are genuine text in the document; what
+ * was wrong was reading an English phrase, a fraction and a group size as times and dates.
+ */
+describe('extractEvents on prose that only looks dated', () => {
+  it('does not read the word now as a deadline', () => {
+    const line = 'As Eric Schmidt famously observed, "Every two days, we now create as much data as we did from the dawn of civilization up until 2003."'
+    expect(extractEvents(line, fall)).toEqual([])
+  })
+
+  it('does not read "the end of the day" as a second deadline', () => {
+    const line = 'Checkpoint 2: Progress Report (Due by the end of the day on 09/13; Submitted to the assignment of Canvas)'
+    const out = extractEvents(line, fall)
+    expect(out.map((e) => e.date)).toEqual(['2026-09-13'])
+  })
+
+  it('does not read a fraction inside an equation as a date', () => {
+    const line = 'If your peer evaluation is 10 out of 10, your final score remains 400 × 10/10 = 400, which is a perfect score.'
+    expect(extractEvents(line, fall)).toEqual([])
+  })
+
+  it('does not read a group size as the time something is due', () => {
+    const line = 'Checkpoint 1: Group Formation (Due by the end of the class on 08/27). Form groups of 4–6 students and submit a name.'
+    const [e] = extractEvents(line, fall)
+    expect(e.date).toBe('2026-08-27')
+    expect(e.time).toBeUndefined()
+  })
+
+  it('does not read a lecture number as the time a class starts', () => {
+    const [e] = extractEvents('11/03 Lecture 12-1Association I Chapter 13 Data Analysis', fall)
+    expect(e.date).toBe('2026-11-03')
+    expect(e.time).toBeUndefined()
+  })
+
+  it('still reads a real time written as a clock', () => {
+    const [e] = extractEvents('Sept 30 Research proposal due at 11:59pm', fall)
+    expect(e.time).toBe('23:59')
+  })
+
+  /**
+   * A sentence that mentions a deadline is worth offering, because the date in it is real and
+   * the student may want it. It is not worth ticking: 22 of these arriving pre-approved is how
+   * a paragraph of a syllabus ends up on a calendar.
+   */
+  it('offers a deadline buried in a sentence without ticking it', () => {
+    // Deliberately under the length at which a line is already treated as a paragraph: the
+    // rows this missed on the real syllabus ran 90 to 110 characters, so length alone let
+    // every one of them through pre-ticked.
+    const line = 'Checkpoint 3: Questionnaire Design (Due by the end of the day on 09/30; Submitted to the discussion board)'
+    const [e] = extractEvents(line, fall)
+    expect(e.title.length).toBeLessThan(120)
+    expect(e.date).toBe('2026-09-30')
+    expect(e.include).toBe(false)
+    expect(e.confidence).toBe('low')
+  })
+
+  /**
+   * Only the spans that actually became the row's date or time are cut out of the title. A
+   * lecture numbered 12-1 was being removed as if it were a time, leaving "Lecture Association
+   * I" on the calendar, and a refused phrase left a hole mid-sentence: "Due by the end of on".
+   */
+  it('keeps a number in the title when it was refused as a time', () => {
+    const [e] = extractEvents('11/03 Lecture 12-1Association I Chapter 13', fall)
+    expect(e.title).toContain('12-1')
+  })
+
+  it('leaves no hole where a phrase was refused as a date', () => {
+    const [e] = extractEvents('Checkpoint 2: Progress Report (Due by the end of the day on 09/13)', fall)
+    expect(e.title).toContain('the end of the day on')
+  })
+
+  it('does not leave half a date range sitting in the title', () => {
+    const [e] = extractEvents('10/05 Monday – 10/09 Friday Lectures 1-7', fall)
+    expect(e.date).toBe('2026-10-05')
+    expect(e.title).toBe('Lectures 1-7')
+  })
+
+  it('leaves a short schedule row ticked even when the date sits inside it', () => {
+    const [e] = extractEvents('Quiz 1 on Sept 14 in class', fall)
+    expect(e.include).toBe(true)
+    expect(e.confidence).toBe('high')
+  })
+
+  it('leaves a table row ticked when the date leads it', () => {
+    const [e] = extractEvents('08/25 Lecture 01-1 Administrative Details Chapter 1 Group Formation', fall)
+    expect(e.include).toBe(true)
+    expect(e.confidence).toBe('high')
+  })
+})

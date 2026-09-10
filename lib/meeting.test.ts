@@ -25,4 +25,19 @@ describe('detectMeeting', () => {
   it('returns null when there is no weekly pattern', () => {
     expect(detectMeeting('Sept 14: Quiz 1\nOct 12: Midterm at 2pm', fall)).toBeNull()
   })
+
+  /**
+   * A real syllabus (UCF MAR3613) labels the row "Class Hours" and puts the days and the times
+   * on the two lines under it, so requiring both on one line found no meeting at all and the
+   * student lost their recurring class.
+   */
+  it('reads a meeting whose days and times are on separate lines', () => {
+    const m = detectMeeting('MAR3613 Marketing Research\nSemester: Fall 2026\nClass Hours\nTuesdays & Thursdays\n12pm-1:15pm', fall)!
+    expect(m).toMatchObject({ days: ['TU', 'TH'], start: '12:00', end: '13:15' })
+  })
+
+  it('does not take office hours for the class meeting', () => {
+    const m = detectMeeting('BIOL 210\nOffice Hours: Mondays 9:00-10:00\nClass: Tuesdays and Thursdays 2:00-3:15 pm', fall)!
+    expect(m).toMatchObject({ days: ['TU', 'TH'], start: '14:00', end: '15:15' })
+  })
 })
