@@ -12,6 +12,10 @@ const DAY_TOKENS: [RegExp, Weekday][] = [
 ]
 const LETTER_CODES: Record<string, Weekday> = { M: 'MO', T: 'TU', W: 'WE', R: 'TH', F: 'FR' }
 const COMPACT = /\b(?:M|T|W|R|F|Th|Tu){2,5}\b/g
+// A one-day class is written as one letter — "Class Meeting Days: M" — which is a letter, not
+// a day code, until the label in front of it says otherwise. The label is what makes it safe.
+const LABELLED_CODE = /\bdays?\s*:?\s*((?:M|T|W|R|F|Th|Tu|Sa|Su)+)\b/i
+const CLASS_WORD = /\b(class|lecture|lab|seminar|section|meets?|meeting)\b/i
 const TIME_RANGE = /(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?)\s*(am|pm|a\.m\.|p\.m\.)?/i
 // A place word keeps its own name: "Room 12" and "Science Hall 118" are directions a student
 // can follow, while the bare "12" or "118" they used to become is not.
@@ -43,6 +47,12 @@ function daysFromLine(line: string): Weekday[] {
       for (const t of tokens) found.add(t === 'Th' ? 'TH' : t === 'Tu' ? 'TU' : LETTER_CODES[t])
     }
   }
+  if (found.size === 0) {
+    const labelled = LABELLED_CODE.exec(line)
+    for (const t of labelled?.[1].match(/Th|Tu|[MTWRF]/g) ?? []) {
+      found.add(t === 'Th' ? 'TH' : t === 'Tu' ? 'TU' : LETTER_CODES[t])
+    }
+  }
   return (['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as Weekday[]).filter((d) => found.has(d))
 }
 
@@ -59,11 +69,16 @@ export function detectMeeting(text: string, term: Term): Meeting | null {
   // A syllabus that labels the row ("Class Hours") often puts the days on the next line and the
   // times on the one after, so each line is also tried joined to the one that follows it. The
   // pairs are read in document order, which keeps a header row ahead of anything further down.
-  const candidates = head.flatMap((line, i) => (i + 1 < head.length ? [line, `${line} ${head[i + 1]}`] : [line]))
+  // Office hours are a time a professor is in a room, not a class anyone has to attend, and
+  // they are written in exactly the shape this looks for — often as a bare "Mondays 4:45 pm -
+  // 5:45 pm" under a heading, so the heading is looked for above the line too. A line that
+  // says outright that it is the class outranks a heading further up the page.
+  const nearby = (i: number) => head.slice(Math.max(0, i - 3), i + 2).join(' ')
+  const candidates = head.flatMap((line, i) => {
+    if (/office\s+hours?/i.test(nearby(i)) && !CLASS_WORD.test(line)) return []
+    return i + 1 < head.length ? [line, `${line} ${head[i + 1]}`] : [line]
+  })
   for (const line of candidates) {
-    // Office hours are a time a professor is in a room, not a class anyone has to attend, and
-    // they are written in exactly the shape this looks for.
-    if (/office\s+hours?/i.test(line)) continue
     const time = TIME_RANGE.exec(line)
     if (!time) continue
     const days = daysFromLine(line)
