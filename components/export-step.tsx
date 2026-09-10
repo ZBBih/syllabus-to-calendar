@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState, useSyncExternalStore, type Dispatch } from 'react'
-import { REMINDERS, type Reminder } from '@/lib/ics'
-import type { Action, State } from '@/lib/store'
+import { REMINDERS, type ExportedEntry, type Reminder } from '@/lib/ics'
+import { reducer, type Action, type State } from '@/lib/store'
 import { exportable, exportableCourses, fileNameFor, mergeHistory, planForAll, planForCourse, unnamedWithEvents } from '@/lib/export'
 import { courseTag } from '@/lib/uid'
 import { previewRows } from './date-preview'
@@ -20,9 +20,8 @@ const GUIDES = {
     'Events sync to your phone automatically.',
   ],
   Apple: [
-    'On iPhone: tap "Add to my calendar" above, then "Save to Files".',
-    'Open the Files app and tap syllabify.ics. If your phone offers to add the events to Calendar, accept it and you are done.',
-    'If you get only a preview of the list with no way to add it, another app on your phone has claimed .ics files — it is the one named on the button at the bottom of that preview. Calendar is not in the share sheet, so there is no way through from the phone. Import on a computer instead and it will sync back.',
+    'On iPhone or iPad: tap "Add to my calendar" above. Your phone shows its own list of the dates with an "Add All" button at the top. Tap that and you are done.',
+    'Nothing gets saved to Files and nothing else has to be installed. If you want the file itself as well, use "Or send the file somewhere else" under the button.',
     'On a Mac: double-click syllabify.ics in Downloads, pick a calendar, click OK.',
     'To keep school separate, make a School calendar first with File > New Calendar.',
     'iCloud syncs it to every Apple device, so importing once on a Mac puts it on your phone too.',
@@ -45,6 +44,43 @@ const canShareFiles = () => {
   }
 }
 const noop = () => () => {}
+const onApplePhone = () => isAppleMobile(navigator.userAgent, navigator.maxTouchPoints ?? 0)
+
+/**
+ * An iPhone or iPad, as opposed to a Mac.
+ *
+ * These are the devices where handing the file to another app is a dead end: Calendar is not in
+ * the share sheet, and whichever app has claimed .ics gets it instead. Navigating to the file
+ * rather than sharing it gets Apple's own import screen, so they take a different route. iPadOS
+ * reports itself as a Mac, and the touch points are the only thing that gives it away.
+ */
+export function isAppleMobile(ua: string, touchPoints = 0): boolean {
+  if (/iPhone|iPad|iPod/i.test(ua)) return true
+  return /Macintosh/i.test(ua) && touchPoints > 1
+}
+
+/**
+ * Assigning location is what was verified on a real iPhone to produce the import screen, so it
+ * is what ships. This indirection exists only so tests can watch it; jsdom cannot follow a
+ * navigation, and an anchor click is a different enough mechanism that it would need retesting.
+ */
+export const nav = {
+  go(url: string) {
+    window.location.href = url
+  },
+}
+
+/**
+ * Hand the calendar file to the operating system as a page rather than as a download.
+ *
+ * The bytes are identical either way. What differs is how they arrive: Safari shows its own
+ * event list with an Add All button for a text/calendar navigation, and sends the same file to
+ * the share sheet, where there is no calendar to pick, when it is shared or downloaded instead.
+ * The URL is deliberately not revoked, because this document is about to be replaced by it.
+ */
+function openCalendarFile(ics: string) {
+  nav.go(URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' })))
+}
 
 export function defaultTab(ua: string): Tab {
   if (/iPhone|iPad|iPod|Macintosh/i.test(ua)) return 'Apple'
@@ -63,13 +99,23 @@ function saveFile(text: string, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispatch<Action> }) {
+export function ExportStep({
+  state,
+  dispatch,
+  persistNow,
+}: {
+  state: State
+  dispatch: Dispatch<Action>
+  /** Write this state to storage now. The calendar preview replaces the page before a debounce would run. */
+  persistNow?: (state: State) => void
+}) {
   const [tab, setTab] = useState<Tab>(() => (typeof navigator === 'undefined' ? 'Google' : defaultTab(navigator.userAgent)))
   const [done, setDone] = useState<string | null>(null)
   const [menu, setMenu] = useState(false)
   const [shared, setShared] = useState<string | null>(null)
   const [celebrate, setCelebrate] = useState(0)
   const canShare = useSyncExternalStore(noop, canShareFiles, () => false)
+  const appleMobile = useSyncExternalStore(noop, onApplePhone, () => false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // This is the last screen before a student leaves, so a menu that cannot be put away is the
@@ -113,8 +159,20 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   const clashDays = new Set(previewRows(state.courses).filter((r) => r.clash).map((r) => r.date)).size
   const repeat = state.exportSequence > 0
 
+  /**
+   * Record what just went onto the calendar, and commit it immediately.
+   *
+   * The write is normally debounced, which is right for typing but wrong here: on an iPhone the
+   * calendar preview replaces this page within the same tick, and a pending write that never
+   * lands would leave the next export unable to withdraw anything.
+   */
+  function record(entries: ExportedEntry[]) {
+    dispatch({ type: 'recordExport', entries })
+    persistNow?.(reducer(state, { type: 'recordExport', entries }))
+  }
+
   function succeed(message: string) {
-    dispatch({ type: 'recordExport', entries: plan.entries })
+    record(plan.entries)
     setDone(message)
     setCelebrate((n) => n + 1)
   }
@@ -129,12 +187,31 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
   }
 
   /**
-   * The single way out. On a phone that can hand a file to another app this opens the share
-   * sheet, which is by far the shortest route to Calendar; everywhere else it saves the file.
-   * If the share sheet is dismissed we leave the student where they were rather than dumping
-   * a download they did not ask for.
+   * The way out, and the shortest one each device has.
+   *
+   * On an iPhone or iPad that is a navigation to the file, which gets Apple's own event list
+   * with an Add All button. The share sheet was the obvious route and is the wrong one: Calendar
+   * is not in it, so the file goes to whichever app has claimed .ics and the student is stuck
+   * looking at a preview with no way to accept it. Sharing stays available underneath, because
+   * mailing the file to a computer is the escape hatch when anything else goes wrong.
+   *
+   * Everywhere else this is unchanged: the share sheet where a file can be shared, a download
+   * otherwise. Android hands the file to Google Calendar perfectly well already.
    */
   async function addToCalendar() {
+    if (appleMobile) {
+      record(plan.entries)
+      // Set before leaving so that a phone which restores this page from its back-forward cache
+      // brings the student back to the finished screen rather than to the button again.
+      setDone(
+        withdrawing
+          ? 'Your calendar has dropped those events.'
+          : 'Every date is on your calendar. Reminders are set.',
+      )
+      setCelebrate((n) => n + 1)
+      openCalendarFile(plan.ics)
+      return
+    }
     if (!canShare) {
       downloadAll()
       return
@@ -158,6 +235,23 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
    * only place the app ever asks for anything: a share sheet where there is one, the clipboard
    * everywhere else, and a plain instruction if the browser refuses both.
    */
+  /**
+   * The escape hatch on an iPhone: hand the file to another app after all.
+   *
+   * Calendar is not in that sheet, so this is not the way onto the calendar. It is the way to
+   * Mail or Files, which is what a student needs when they are going to import on a computer
+   * instead, and it is the only route left if Apple ever stops offering the import screen.
+   */
+  async function shareFile() {
+    const file = new File([plan.ics], 'syllabify.ics', { type: 'text/calendar' })
+    try {
+      await navigator.share({ files: [file], title: withdrawing ? 'Class deadlines to remove' : 'My class deadlines' })
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
+      downloadAll()
+    }
+  }
+
   async function shareSite() {
     // The sentence carries the link rather than sitting beside it: a share with both a text and
     // a url loses the text in Messages on iOS, and a bare link says nothing about what it is.
@@ -276,13 +370,22 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                 </button>
                 <p className="max-w-sm text-xs leading-relaxed text-muted">
                   {withdrawing
-                    ? canShare
-                      ? 'Opens your share sheet. Save it to Files, then open it the same way you imported.'
-                      : 'Saves one file. Opening it clears those events from your calendar.'
-                    : canShare
-                      ? 'Opens your share sheet. Save it to Files, then open it to add every date.'
-                      : 'Saves one file. Opening it imports every date at once.'}
+                    ? appleMobile
+                      ? 'Opens the same list your phone showed when you imported. Tap Add All and those events come off.'
+                      : canShare
+                        ? 'Opens your share sheet. Save it to Files, then open it the same way you imported.'
+                        : 'Saves one file. Opening it clears those events from your calendar.'
+                    : appleMobile
+                      ? 'Opens your phone\u2019s own list of the dates. Tap Add All and they are in your calendar.'
+                      : canShare
+                        ? 'Opens your share sheet. Save it to Files, then open it to add every date.'
+                        : 'Saves one file. Opening it imports every date at once.'}
                 </p>
+                {appleMobile && canShare && (
+                  <button type="button" onClick={shareFile} disabled={!canAct} className="link text-xs">
+                    Or send the file somewhere else
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -317,7 +420,7 @@ export function ExportStep({ state, dispatch }: { state: State; dispatch: Dispat
                       onClick={() => {
                         const one = planForCourse(c, state)
                         saveFile(one.ics, fileNameFor(c))
-                        dispatch({ type: 'recordExport', entries: mergeHistory(state.lastExport, one.entries, courseTag(c.name)) })
+                        record(mergeHistory(state.lastExport, one.entries, courseTag(c.name)))
                         setMenu(false)
                         setDone(`${fileNameFor(c)} is in your Downloads.`)
                         setCelebrate((n) => n + 1)
