@@ -142,4 +142,29 @@ describe('mergeWeights', () => {
     const mine = [w('Mine', 100, 90)]
     expect(mergeWeights(mine, [])).toBe(mine)
   })
+
+  /**
+   * A real syllabus (UCF MAR3613) ends its grading table with "Total 1000 100%". Counting that
+   * row as a category doubled the sum, the sum guard threw the whole table away, and the grade
+   * calculator never appeared for a syllabus that plainly had one.
+   */
+  it('ignores the total row of a grading table', () => {
+    const text = [
+      'Grading Elements Points Percentages',
+      'Class Attendance and Participation 150 15%',
+      'In Class Case Studies 100 10%',
+      'Midterm I 150 15%',
+      'Midterm II 200 20%',
+      'Group Projects 400 40%',
+      'Total 1000 100%',
+    ].join('\n')
+    const w = extractWeights(text)
+    expect(w.map((x) => [x.label, x.weight])).toEqual([
+      ['Class Attendance and Participation', 15],
+      ['In Class Case Studies', 10],
+      ['Midterm I', 15],
+      ['Midterm II', 20],
+      ['Group Projects', 40],
+    ])
+  })
 })

@@ -1,4 +1,5 @@
 import * as chrono from 'chrono-node'
+import { looksLikeCode } from './course-name'
 import type { CalendarEvent } from './ics'
 
 export type Season = 'Fall' | 'Spring' | 'Summer' | 'Winter'
@@ -116,14 +117,27 @@ export function extractEvents(text: string, term: Term): ExtractedEvent[] {
 
 /** What extraction read, line by line, from the same pass that produces the events. */
 export function readReport(text: string, term: Term): ReadLine[] {
-  return scan(text, term).lines
+  // The events are deduped on their way out, so the report has to fold the same copies or it
+  // tells the student it captured one more date than the table below it is showing.
+  const seen = new Set<string>()
+  return scan(text, term).lines.map((l) => ({
+    ...l,
+    captured: l.captured.filter((c) => {
+      const k = dedupeKey(c)
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    }),
+  }))
 }
+
+const dedupeKey = (e: { date: string; title: string }) => `${e.date}|${e.title.toLowerCase()}`
 
 function dedupe(found: ExtractedEvent[]): ExtractedEvent[] {
   const seen = new Set<string>()
   return found
     .filter((e) => {
-      const k = `${e.date}|${e.title.toLowerCase()}`
+      const k = dedupeKey(e)
       if (seen.has(k)) return false
       seen.add(k)
       return true
@@ -174,6 +188,9 @@ function scan(text: string, term: Term): { events: ExtractedEvent[]; lines: Read
       // was captured; reporting either as missed would be noise in the one place that has to be
       // trustworthy.
       if (/^\d{4}$/.test(r.text.trim())) continue
+      // "MAR3613" parses as a March date, and naming a course code as a date the app left out
+      // is noise in the one screen whose whole job is to be believed.
+      if (looksLikeCode(r.text.trim())) continue
       if (notADate(r, line)) {
         report[i].skipped.push({ text: r.text, reason: 'a length of time, not a date', title })
       } else if (!r.start.isCertain('month') || !r.start.isCertain('day')) {

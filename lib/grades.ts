@@ -13,6 +13,9 @@ const PERCENT_LINE = /^(.{2,60}?)[\s.·:…\-]*(\d{1,3}(?:\.\d)?)\s*%\s*$/
 const PERCENT_LEADING = /^(\d{1,3}(?:\.\d)?)\s*%\s*[\s.·:…\-]*(.{2,60}?)\s*$/
 const DROP = /\b(late|penalt|per day|per class|deduct|attendance polic|curve|scale|minimum|at least|below|above|threshold|extra credit|bonus)\b/i
 const GRADE_SCALE = /^[A-F][+-]?\b/
+// The last row of a grading table states the sum of the rows above it, not another category.
+// Counting it doubles the total, and the sum guard below then discards the whole table.
+const TOTAL_ROW = /^(?:sub)?total\b|^overall\b|^sum\b/i
 const CLEAN = /^[\s\-–—:|•*.,\d)(]+|[\s\-–—:|•*.,]+$/g
 // A syllabus often writes the whole breakdown as one sentence rather than a table:
 // "Grading: Problem sets 20%, Quizzes 15%, Midterm 25%". These pick the pairs out of it.
@@ -42,11 +45,17 @@ export function extractWeights(text: string): Weight[] {
   const found: { label: string; weight: number; inline: boolean }[] = []
   let readingInline = false
   const keep = (rawLabel: string, rawWeight: string) => {
-    const label = cleanLabel(rawLabel)
+    let label = cleanLabel(rawLabel)
     const weight = Number(rawWeight)
+    // A three-column table puts the points beside the percentage: "Midterm II 200 20%". The
+    // points are not part of the category's name, and they are the larger of the two numbers,
+    // which is what tells them apart from a label that ends in a number of its own ("Quiz 2").
+    const points = /^(.*\S)\s+(\d{2,4})$/.exec(label)
+    if (points && Number(points[2]) > weight) label = points[1]
     if (!label || label.length < 2 || weight <= 0 || weight > 100) return
     if (/^\d+$/.test(label)) return
     if (DROP.test(label)) return
+    if (TOTAL_ROW.test(label)) return
     found.push({ label, weight, inline: readingInline })
   }
 
