@@ -305,3 +305,21 @@ describe('extractEvents on prose that only looks dated', () => {
     expect(e.confidence).toBe('high')
   })
 })
+
+describe('readReport agrees with the rows the student gets', () => {
+  /**
+   * The report is the answer to "what did it miss", so a count it does not share with the
+   * table below it is the one number that must not be wrong. Events are deduped on the way
+   * out and the report was still counting the copy that got folded.
+   */
+  it('does not count a date the dedupe folded', () => {
+    const text = 'Sept 14 Quiz 1\nSept 14 Quiz 1'
+    const captured = readReport(text, fall).reduce((n, l) => n + l.captured.length, 0)
+    expect(captured).toBe(extractEvents(text, fall).length)
+  })
+
+  it('does not offer a course code as a date it left out', () => {
+    const [line] = readReport('MAR3613 Marketing Research', fall)
+    expect(line.skipped).toEqual([])
+  })
+})
