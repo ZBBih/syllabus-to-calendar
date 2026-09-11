@@ -5,6 +5,7 @@ import type { Action } from "@/lib/store";
 import { SAMPLE_NAME, SAMPLE_TEXT } from "@/lib/sample";
 import { ExtractDemo } from "./extract-demo";
 import { HeroArt } from "./hero-art";
+import { Reveal } from "./reveal";
 import { SupportLink } from "./site-links";
 import { ArrowRight, Check, Infinite, Lock, X } from "./icons";
 
@@ -120,92 +121,98 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
         </div>
       </section>
 
-      <div className="mt-20 sm:mt-24">
+      <Reveal className="mt-20 sm:mt-24">
         <ExtractDemo onSample={sample} />
-      </div>
+      </Reveal>
 
-      <ul className="stagger mt-16 grid gap-4 sm:grid-cols-3">
-        {PROOF.map(({ icon: Icon, label, detail, tint, iconBg }) => (
-          <li key={label} className={`tile ${tint}`}>
-            <span className={`tile-icon ${iconBg}`}>
-              <Icon size={20} />
-            </span>
-            <h2 className="h3 mt-4">{label}</h2>
-            <p className="mt-2 text-[0.9375rem] leading-relaxed">{detail}</p>
-          </li>
-        ))}
-      </ul>
+      <Reveal className="mt-16">
+        <ul className="reveal-group grid gap-4 sm:grid-cols-3">
+          {PROOF.map(({ icon: Icon, label, detail, tint, iconBg }) => (
+            <li key={label} className={`tile lift ${tint}`}>
+              <span className={`tile-icon ${iconBg}`}>
+                <Icon size={20} />
+              </span>
+              <h2 className="h3 mt-4">{label}</h2>
+              <p className="mt-2 text-[0.9375rem] leading-relaxed">{detail}</p>
+            </li>
+          ))}
+        </ul>
+      </Reveal>
 
-      <section className="mt-20">
-        <h2 className="h2">What makes this different</h2>
-        <p className="lede mt-2">
-          There are a dozen apps that read a syllabus. Every one of them wants
-          an account, a copy of your file, and eventually your money.
-        </p>
-        <div className="card mt-6 overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="strip text-xs font-semibold uppercase tracking-wider text-muted">
-                <th className="px-2 py-3 font-semibold min-[400px]:px-4 sm:px-5" />
-                <th className="px-2 py-3 font-semibold min-[400px]:px-4 sm:px-5">
-                  The other apps
-                </th>
-                <th className="px-2 py-3 font-semibold text-accent min-[400px]:px-4 sm:px-5">
-                  Syllabify
-                </th>
-              </tr>
-            </thead>
-            <tbody className="text-[0.9375rem]">
-              {COMPARISON.map((row) => (
-                <tr
-                  key={row.label}
-                  className="border-b border-line last:border-0"
-                >
-                  <th
-                    scope="row"
-                    className="px-2 py-3 text-left font-medium min-[400px]:px-4 sm:px-5"
-                  >
-                    {row.label}
-                  </th>
-                  <td className="px-2 py-3 text-muted min-[400px]:px-4 sm:px-5">
-                    <span className="flex items-center gap-2">
-                      <X size={14} className="shrink-0 text-danger" />
-                      {row.them}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 font-medium min-[400px]:px-4 sm:px-5">
-                    <span className="flex items-center gap-2">
-                      <Check size={14} className="shrink-0 text-accent" />
-                      {row.us}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="block block-soft mt-20 px-6 py-12 text-center sm:py-14">
-        <h2 className="h2">Ready when you are</h2>
-        <p className="lede mx-auto mt-2">
-          One file, about a minute, and you are done for the term.
-        </p>
-        <button
-          type="button"
-          onClick={start}
-          className="btn btn-primary btn-hero mt-6"
-        >
-          Add my syllabi <ArrowRight size={18} />
-        </button>
-        <div className="mt-8 flex flex-col items-center gap-2">
-          <p className="text-sm text-muted">
-            This is free and always will be. If it saved you an evening, you can
-            say thanks.
+      <Reveal>
+        <section className="mt-20">
+          <h2 className="h2">What makes this different</h2>
+          <p className="lede mt-2">
+            There are a dozen apps that read a syllabus. Every one of them wants
+            an account, a copy of your file, and eventually your money.
           </p>
-          <SupportLink />
-        </div>
-      </section>
+          <div className="card mt-6 overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="strip text-xs font-semibold uppercase tracking-wider text-muted">
+                  <th className="px-2 py-3 font-semibold min-[400px]:px-4 sm:px-5" />
+                  <th className="px-2 py-3 font-semibold min-[400px]:px-4 sm:px-5">
+                    The other apps
+                  </th>
+                  <th className="px-2 py-3 font-semibold text-accent min-[400px]:px-4 sm:px-5">
+                    Syllabify
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-[0.9375rem]">
+                {COMPARISON.map((row) => (
+                  <tr
+                    key={row.label}
+                    className="border-b border-line last:border-0"
+                  >
+                    <th
+                      scope="row"
+                      className="px-2 py-3 text-left font-medium min-[400px]:px-4 sm:px-5"
+                    >
+                      {row.label}
+                    </th>
+                    <td className="px-2 py-3 text-muted min-[400px]:px-4 sm:px-5">
+                      <span className="flex items-center gap-2">
+                        <X size={14} className="shrink-0 text-danger" />
+                        {row.them}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3 font-medium min-[400px]:px-4 sm:px-5">
+                      <span className="flex items-center gap-2">
+                        <Check size={14} className="shrink-0 text-accent" />
+                        {row.us}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </Reveal>
+
+      <Reveal>
+        <section className="block block-soft mt-20 px-6 py-12 text-center sm:py-14">
+          <h2 className="h2">Ready when you are</h2>
+          <p className="lede mx-auto mt-2">
+            One file, about a minute, and you are done for the term.
+          </p>
+          <button
+            type="button"
+            onClick={start}
+            className="btn btn-primary btn-hero mt-6"
+          >
+            Add my syllabi <ArrowRight size={18} />
+          </button>
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <p className="text-sm text-muted">
+              This is free and always will be. If it saved you an evening, you
+              can say thanks.
+            </p>
+            <SupportLink />
+          </div>
+        </section>
+      </Reveal>
     </div>
   );
 }

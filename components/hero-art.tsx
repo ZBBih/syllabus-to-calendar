@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useReducedMotion } from "@/lib/motion";
 import {
   ARROWS,
   ART_ALT,
@@ -26,8 +30,10 @@ import {
  * nothing, and stays sharp at any size. Every bit of the animation is CSS on classes defined
  * in globals.css, which is also where it all gets switched off for reduced motion.
  *
- * The sequence runs once on load and then holds still, because a loop beside a call to action
- * competes with it for attention.
+ * The sequence plays on load, rests, and plays again every REPLAY_EVERY milliseconds, so the
+ * picture is never a still beside the call to action for long. The rest is most of the
+ * period: the flight itself is about two seconds. Replaying is a remount of the animated
+ * parts, which restarts their CSS animations without any of the timing living in JavaScript.
  *
  * The parts take their colours as a parameter and can be drawn still, which is what lets the
  * cropped halves reuse them without inheriting an animation they have no room for.
@@ -123,14 +129,19 @@ function Arrows({ ink, still }: { ink: ArtInk; still?: boolean }) {
   );
 }
 
-function Chips({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boolean }) {
+function Chips({
+  ink,
+  still,
+  joy,
+}: {
+  ink: ArtInk;
+  still?: boolean;
+  joy?: boolean;
+}) {
   return (
     <g className="art-flight">
       {[0, 1, 2].map((i) => (
-        <g
-          key={i}
-          className={still ? undefined : `art-chip art-chip-${i}`}
-        >
+        <g key={i} className={still ? undefined : `art-chip art-chip-${i}`}>
           <rect
             x={CHIP.x}
             y={CHIP.y}
@@ -172,7 +183,15 @@ function Chips({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boolea
   );
 }
 
-function Calendar({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boolean }) {
+function Calendar({
+  ink,
+  still,
+  joy,
+}: {
+  ink: ArtInk;
+  still?: boolean;
+  joy?: boolean;
+}) {
   return (
     <g className="art-cal">
       <rect
@@ -227,7 +246,9 @@ function Calendar({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boo
                   height={b.size}
                   rx="4"
                   fill={joy ? (JOY[hit.order] ?? ink.accent) : ink.accent}
-                  className={still ? undefined : `art-cell art-cell-${hit.order}`}
+                  className={
+                    still ? undefined : `art-cell art-cell-${hit.order}`
+                  }
                 />
               )}
             </g>
@@ -242,6 +263,9 @@ function Calendar({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boo
  * `onHero` draws it for the green block: white paper, white flight paths, and the dates in
  * the joy colours so the three of them can be told apart in the air and on the calendar.
  */
+/** How often the flight plays again, in milliseconds. About six seconds of rest after it. */
+export const REPLAY_EVERY = 8000;
+
 export function HeroArt({
   className = "",
   onHero = false,
@@ -250,17 +274,37 @@ export function HeroArt({
   onHero?: boolean;
 }) {
   const ink = onHero ? HERO_INK : THEME_INK;
+  const reduced = useReducedMotion();
+  const [run, setRun] = useState(0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const id = setInterval(() => {
+      // A tab that is not being looked at is not owed a replay.
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      )
+        return;
+      setRun((r) => r + 1);
+    }, REPLAY_EVERY);
+    return () => clearInterval(id);
+  }, [reduced]);
+
   return (
     <svg
       viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`}
       className={`hero-art w-full ${className}`}
       role="img"
       aria-label={ART_ALT}
+      data-run={run}
     >
-      <Sheet ink={ink} />
-      <Arrows ink={ink} />
-      <Chips ink={ink} joy={onHero} />
-      <Calendar ink={ink} joy={onHero} />
+      <g key={run}>
+        <Sheet ink={ink} />
+        <Arrows ink={ink} />
+        <Chips ink={ink} joy={onHero} />
+        <Calendar ink={ink} joy={onHero} />
+      </g>
     </svg>
   );
 }
