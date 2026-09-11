@@ -1,4 +1,5 @@
 import {
+  ARROWS,
   ART_ALT,
   ART_HEIGHT,
   ART_WIDTH,
@@ -7,6 +8,8 @@ import {
   CROP,
   FILLED,
   GRID,
+  HERO_INK,
+  JOY,
   SHEET,
   SHEET_LINES,
   THEME_INK,
@@ -84,7 +87,43 @@ function Sheet({ ink, still }: { ink: ArtInk; still?: boolean }) {
   );
 }
 
-function Chips({ ink, still }: { ink: ArtInk; still?: boolean }) {
+/**
+ * The flight paths, drawn just ahead of the date that follows each one. On the theme ground
+ * they are the hairline colour; on the hero block, white.
+ */
+function Arrows({ ink, still }: { ink: ArtInk; still?: boolean }) {
+  return (
+    <g className="art-paths">
+      <defs>
+        <marker
+          id="art-arrowhead"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M0 0L10 5L0 10z" fill={ink.arrow} />
+        </marker>
+      </defs>
+      {ARROWS.map((a, i) => (
+        <path
+          key={i}
+          d={a.d}
+          fill="none"
+          stroke={ink.arrow}
+          strokeWidth="1.75"
+          strokeDasharray="4 5"
+          markerEnd="url(#art-arrowhead)"
+          className={still ? undefined : `art-arrow art-arrow-${i}`}
+        />
+      ))}
+    </g>
+  );
+}
+
+function Chips({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boolean }) {
   return (
     <g className="art-flight">
       {[0, 1, 2].map((i) => (
@@ -98,7 +137,7 @@ function Chips({ ink, still }: { ink: ArtInk; still?: boolean }) {
             width={CHIP.w}
             height={CHIP.h}
             rx="6"
-            fill={ink.accent}
+            fill={joy ? JOY[i] : ink.accent}
           />
           <rect
             x={CHIP.x + 7}
@@ -133,7 +172,7 @@ function Chips({ ink, still }: { ink: ArtInk; still?: boolean }) {
   );
 }
 
-function Calendar({ ink, still }: { ink: ArtInk; still?: boolean }) {
+function Calendar({ ink, still, joy }: { ink: ArtInk; still?: boolean; joy?: boolean }) {
   return (
     <g className="art-cal">
       <rect
@@ -187,7 +226,7 @@ function Calendar({ ink, still }: { ink: ArtInk; still?: boolean }) {
                   width={b.size}
                   height={b.size}
                   rx="4"
-                  fill={ink.accent}
+                  fill={joy ? (JOY[hit.order] ?? ink.accent) : ink.accent}
                   className={still ? undefined : `art-cell art-cell-${hit.order}`}
                 />
               )}
@@ -199,7 +238,18 @@ function Calendar({ ink, still }: { ink: ArtInk; still?: boolean }) {
   );
 }
 
-export function HeroArt({ className = "" }: { className?: string }) {
+/**
+ * `onHero` draws it for the green block: white paper, white flight paths, and the dates in
+ * the joy colours so the three of them can be told apart in the air and on the calendar.
+ */
+export function HeroArt({
+  className = "",
+  onHero = false,
+}: {
+  className?: string;
+  onHero?: boolean;
+}) {
+  const ink = onHero ? HERO_INK : THEME_INK;
   return (
     <svg
       viewBox={`0 0 ${ART_WIDTH} ${ART_HEIGHT}`}
@@ -207,9 +257,10 @@ export function HeroArt({ className = "" }: { className?: string }) {
       role="img"
       aria-label={ART_ALT}
     >
-      <Sheet ink={THEME_INK} />
-      <Chips ink={THEME_INK} />
-      <Calendar ink={THEME_INK} />
+      <Sheet ink={ink} />
+      <Arrows ink={ink} />
+      <Chips ink={ink} joy={onHero} />
+      <Calendar ink={ink} joy={onHero} />
     </svg>
   );
 }

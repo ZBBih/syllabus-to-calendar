@@ -39,6 +39,9 @@ export const MAX_BYTES = 25 * 1024 * 1024
 export const MAX_PAGES = 400
 export const MAX_TEXT_CHARS = 600_000
 
+/** How many PDF pages are read at once. Enough to keep the worker busy, few enough for a phone. */
+export const PAGE_BATCH = 8
+
 export class FileTooLargeError extends Error {
   constructor(size: number) {
     super(`That file is ${(size / 1024 / 1024).toFixed(0)} MB. The limit is 25 MB; a syllabus PDF is usually under 5 MB.`)
@@ -86,8 +89,8 @@ async function pdfToText(file: File): Promise<string> {
   pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
   const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
   if (doc.numPages > MAX_PAGES) throw new TooManyPagesError(doc.numPages)
-  const pages: string[] = []
-  for (let p = 1; p <= doc.numPages; p++) {
+
+  const pageText = async (p: number) => {
     const page = await doc.getPage(p)
     const content = await page.getTextContent()
     let last: number | null = null
@@ -100,7 +103,18 @@ async function pdfToText(file: File): Promise<string> {
       buf += item.str
       last = y
     }
-    pages.push(buf)
+    return buf
+  }
+
+  // Pages were read strictly one after another, so a long syllabus spent most of its time
+  // waiting rather than working. They are independent, so they are read in batches instead —
+  // bounded rather than all at once, because a phone holding four hundred decoded pages in
+  // memory at the same time is the other way to make this slow. Order is preserved.
+  const pages: string[] = []
+  for (let first = 1; first <= doc.numPages; first += PAGE_BATCH) {
+    const batch = []
+    for (let p = first; p < first + PAGE_BATCH && p <= doc.numPages; p++) batch.push(pageText(p))
+    pages.push(...(await Promise.all(batch)))
   }
   const text = normalizeText(pages.join('\n\n'))
   if (!text) throw new NoTextLayerError()

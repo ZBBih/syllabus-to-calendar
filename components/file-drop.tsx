@@ -71,7 +71,7 @@ export function FileDrop({ onFiles, multiple = false, hero = false, className = 
         }}
         aria-busy={busy !== null}
         aria-label={multiple ? 'Choose or drop syllabus files' : 'Choose or drop a syllabus file'}
-        className={`cursor-pointer rounded-xl border border-dashed text-center transition-colors ${hero ? 'px-6 py-9' : 'px-4 py-5'} ${
+        className={`cursor-pointer rounded-2xl border border-dashed text-center transition-colors ${hero ? 'px-6 py-9' : 'px-4 py-5'} ${
           over ? 'border-accent bg-accent-soft' : 'border-line-strong bg-elev hover:border-accent hover:bg-accent-soft/40'
         }`}
       >

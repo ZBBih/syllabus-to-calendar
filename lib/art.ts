@@ -85,6 +85,8 @@ export type ArtInk = {
   accent: string;
   deep: string;
   ink: string;
+  /** The dashed flight paths and their arrowheads. */
+  arrow: string;
 };
 
 export const THEME_INK: ArtInk = {
@@ -94,6 +96,7 @@ export const THEME_INK: ArtInk = {
   accent: "var(--accent)",
   deep: "var(--accent-strong)",
   ink: "var(--accent-ink)",
+  arrow: "var(--line-strong)",
 };
 
 export const LIGHT_INK: ArtInk = {
@@ -103,4 +106,30 @@ export const LIGHT_INK: ArtInk = {
   accent: "#0d7a5c",
   deep: "#085d46",
   ink: "#ffffff",
+  arrow: "#d4cec0",
 };
+
+/**
+ * On the green hero block the paper is white and its printed lines pale green, and the flight
+ * paths are drawn in white. The accent stays the theme's own so the calendar header and the
+ * sheet's title bar keep matching the button beside them.
+ */
+export const HERO_INK: ArtInk = {
+  surface: "#ffffff",
+  line: "#cfe9dd",
+  sunk: "#eef5f1",
+  accent: "var(--accent)",
+  deep: "var(--accent-strong)",
+  ink: "#ffffff",
+  arrow: "rgba(255, 255, 255, 0.8)",
+};
+
+/** The three dates in flight take the joy colours, and the days they land on take them back. */
+export const JOY = ["var(--joy-2)", "var(--joy-3)", "var(--joy-4)"] as const;
+
+/** Dashed flight paths, sheet edge to calendar edge, one per date in flight. */
+export const ARROWS = [
+  { d: `M${SHEET.x + SHEET.w + 2} 66 C 160 66, 180 44, ${CAL.x - 8} 44` },
+  { d: `M${SHEET.x + SHEET.w + 2} 92 C 165 92, 175 90, ${CAL.x - 8} 90` },
+  { d: `M${SHEET.x + SHEET.w + 2} 118 C 160 118, 180 136, ${CAL.x - 8} 136` },
+];

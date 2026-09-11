@@ -342,7 +342,7 @@ export function ExportStep({
                   </span>
                 </span>
               </div>
-              <p className="mt-4 font-display text-2xl">Done.</p>
+              <p className="h3 mt-4">Done.</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-muted">{done}</p>
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 <button type="button" onClick={addToCalendar} disabled={!canAct} className="btn btn-secondary">
@@ -360,7 +360,7 @@ export function ExportStep({
             </>
           ) : (
             <>
-              <p className="font-display text-3xl sm:text-4xl">
+              <p className="h2">
                 {withdrawing ? (
                   <>
                     <span className="tabular-nums text-accent">{plan.cancelled}</span> event{plan.cancelled === 1 ? '' : 's'} to take back
