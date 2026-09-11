@@ -51,6 +51,12 @@ describe('Landing', () => {
     expect(screen.getByRole('list', { name: /what it found/i })).toBeTruthy()
   })
 
+  it('makes its case once at the top and once at the bottom, nowhere in between', () => {
+    render(<Landing dispatch={() => {}} />)
+    expect(screen.getAllByRole('button', { name: /add my syllabi/i })).toHaveLength(2)
+    expect(screen.queryByText(/how it works/i)).toBeNull()
+  })
+
   it('never reaches for the calendar step from the front page', () => {
     const dispatch = vi.fn()
     render(<Landing dispatch={dispatch} />)
