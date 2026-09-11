@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch } from "react";
+import type { Dispatch, ReactNode } from "react";
 import type { Action } from "@/lib/store";
 import { SAMPLE_NAME, SAMPLE_TEXT } from "@/lib/sample";
 import { ExtractDemo } from "./extract-demo";
@@ -66,7 +66,14 @@ const COMPARISON: { label: string; them: string; us: string }[] = [
   { label: "Works on", them: "Often Apple only", us: "Any browser, any phone" },
 ];
 
-export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
+export function Landing({
+  dispatch,
+  topBar,
+}: {
+  dispatch: Dispatch<Action>;
+  /** The site's top bar, drawn inside the green so the page opens as one canvas. */
+  topBar?: ReactNode;
+}) {
   const start = () => dispatch({ type: "setStep", step: 1 });
   const sample = () => {
     dispatch({
@@ -78,10 +85,12 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
 
   return (
     <div className="step-enter">
-      {/* On a wide screen the green runs edge to edge; the words and the picture stay on the
-          page column inside it, so they line up with everything underneath. */}
-      <section className="block block-hero bleed">
-        <div className="mx-auto grid max-w-7xl items-center gap-8 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.35fr_1fr] lg:gap-14 lg:px-6 lg:py-24">
+      {/* The green runs from the top edge of the page to both sides of the screen, with the
+          top bar inside it. The words and the picture stay on the page column, so they line
+          up with everything underneath. */}
+      <section className="block-hero hero-band bleed">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">{topBar}</div>
+        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-10 lg:grid-cols-[1.35fr_1fr] lg:gap-14 lg:pb-24 lg:pt-14">
           <div>
             <h1 className="h-display">
               Your whole semester, on your calendar,{" "}
