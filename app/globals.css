@@ -521,6 +521,25 @@ body::before {
     border-left: 1px solid var(--line-strong);
   }
 
+  /*
+    The bar under the drop zone while a file is read. The fill's width is set inline from the
+    fraction done; the transition is what makes page-by-page progress read as one movement
+    rather than a series of jumps.
+  */
+  .progress {
+    height: 0.375rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--sunk);
+    border: 1px solid var(--line);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+
   /* A small colour square beside a found date, matching the day it lands on in the picture. */
   .dot {
     display: inline-block;
@@ -902,7 +921,8 @@ body::before {
     .btn,
     .field,
     .icon-btn,
-    .lift {
+    .lift,
+    .progress-fill {
       transition: none;
     }
     .reveal,
