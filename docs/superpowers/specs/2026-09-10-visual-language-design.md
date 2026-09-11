@@ -1,7 +1,7 @@
 # Syllabify visual language: design
 
 Date: 2026-09-10
-Status: **approved in principle, paused before implementation.** No code written against it yet.
+Status: **SUPERSEDED 2026-09-11.** Mocked up, rejected on sight; see `2026-09-11-visual-language-design.md`.
 Origin: `docs/reviews/2026-09-10-improve-project.md`, then a look at the built result.
 
 ## Why
