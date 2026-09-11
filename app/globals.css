@@ -22,6 +22,13 @@
   --accent-ink: #ffffff;
   --accent-glow: #12a97e;
 
+  /* The hero block. Light paints it in the accent itself; dark needs a deep green so white
+     type stays readable on it. */
+  --hero: #0d7a5c;
+  --hero-ink: #ffffff;
+  --hero-muted: #d7efe5;
+  --hero-quiet: #a9d9c6;
+
   --joy-1: #0d7a5c;
   --joy-2: #f5b841;
   --joy-3: #ef6f4c;
@@ -30,6 +37,7 @@
   --warn: #a55a08;
   --warn-soft: #fbeed6;
   --warn-line: #e8cf9e;
+  --joy-3-soft: #fde4dc;
 
   --ok: #1f7a4d;
   --ok-soft: #e2f0e7;
@@ -51,6 +59,11 @@
   --accent-ink: #06201a;
   --accent-glow: #32e0aa;
 
+  --hero: #0e4a38;
+  --hero-ink: #ffffff;
+  --hero-muted: #c2e6d6;
+  --hero-quiet: #8fc7b0;
+
   --joy-1: #4fc79d;
   --joy-2: #f5c65f;
   --joy-3: #ff8a68;
@@ -59,6 +72,7 @@
   --warn: #e0a33c;
   --warn-soft: #2c2412;
   --warn-line: #4a3c1c;
+  --joy-3-soft: #3a2119;
 
   --ok: #5cc08b;
   --ok-soft: #16281e;
@@ -78,6 +92,15 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
   --color-accent-glow: var(--accent-glow);
+  --color-hero: var(--hero);
+  --color-hero-ink: var(--hero-ink);
+  --color-hero-muted: var(--hero-muted);
+  --color-hero-quiet: var(--hero-quiet);
+  --color-joy-1: var(--joy-1);
+  --color-joy-2: var(--joy-2);
+  --color-joy-3: var(--joy-3);
+  --color-joy-4: var(--joy-4);
+  --color-joy-3-soft: var(--joy-3-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-warn-line: var(--warn-line);
@@ -263,16 +286,31 @@ body {
   .h1 {
     font-family: var(--font-display), Georgia, serif;
     font-weight: 400;
-    font-size: clamp(2.25rem, 6vw, 3.25rem);
-    line-height: 1.06;
-    letter-spacing: -0.02em;
+    font-size: clamp(2.5rem, 6vw, 3.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
   }
   .h-display {
     font-family: var(--font-display), Georgia, serif;
     font-weight: 400;
-    font-size: clamp(2.75rem, 8vw, 4.5rem);
-    line-height: 1.02;
+    font-size: clamp(2.75rem, 7.5vw, 4.875rem);
+    line-height: 0.98;
     letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  .h2 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(2rem, 4.5vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .h3 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    font-size: 1.625rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
   }
 
   .lede {
@@ -332,13 +370,88 @@ body {
   .card {
     background: var(--elev);
     border: 1px solid var(--line);
-    border-radius: 0.875rem;
+    border-radius: 1rem;
   }
 
   .card-sunk {
     background: var(--sunk);
     border: 1px solid var(--line);
-    border-radius: 0.875rem;
+    border-radius: 1rem;
+  }
+
+  /*
+    The big rounded blocks: the green one the front page opens on, the soft one it closes on.
+    Buttons that sit on the green block take their colour from it rather than from the accent,
+    which is the block itself.
+  */
+  .block {
+    border-radius: 1.75rem;
+  }
+  .block-hero {
+    background: var(--hero);
+    color: var(--hero-ink);
+  }
+  .block-soft {
+    background: var(--accent-soft);
+  }
+  .btn-on-hero {
+    background: var(--hero-ink);
+    color: var(--accent-strong);
+  }
+  .btn-on-hero:hover:not(:disabled) {
+    background: var(--hero-muted);
+  }
+  .btn-ghost-on-hero {
+    color: var(--hero-ink);
+    border: 1.5px solid color-mix(in oklab, var(--hero-ink) 45%, transparent);
+  }
+  .btn-ghost-on-hero:hover:not(:disabled) {
+    border-color: var(--hero-ink);
+  }
+
+  /* A tinted tile with a solid icon square: the three proof points. */
+  .tile {
+    border-radius: 1.25rem;
+    padding: 1.75rem;
+  }
+  .tile-icon {
+    display: inline-flex;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.75rem;
+  }
+
+  /* The sunk header strip along the top of a card. */
+  .strip {
+    background: var(--sunk);
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* All / None / Needs check as one control rather than three loose buttons. */
+  .segmented {
+    display: inline-flex;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 0.625rem;
+    background: var(--elev);
+  }
+  .segmented > .btn {
+    border-radius: 0;
+    border: 0;
+  }
+  .segmented > .btn + .btn {
+    border-left: 1px solid var(--line-strong);
+  }
+
+  /* A small colour square beside a found date, matching the day it lands on in the picture. */
+  .dot {
+    display: inline-block;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 0.1875rem;
+    flex: none;
   }
 
   .btn {
@@ -346,7 +459,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 0.45rem;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     padding: 0.6rem 1.05rem;
     font-weight: 600;
     font-size: 0.9375rem;
@@ -396,7 +509,7 @@ body {
   .btn-hero {
     padding: 1.05rem 1.9rem;
     font-size: 1.125rem;
-    border-radius: 0.75rem;
+    border-radius: 0.875rem;
     box-shadow: 0 10px 30px -12px
       color-mix(in oklab, var(--accent) 75%, transparent);
   }
@@ -715,6 +828,12 @@ body {
     .icon-btn {
       width: 2.5rem;
       height: 2.5rem;
+    }
+    .block {
+      border-radius: 1.25rem;
+    }
+    .tile {
+      padding: 1.25rem;
     }
   }
 
