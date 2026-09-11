@@ -40,7 +40,7 @@ export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?:
                   />
                 </td>
                 <td className="cell-date px-2 py-1.5 align-top">
-                  <input type="date" value={e.date} onChange={(ev) => update({ date: ev.target.value })} className="field py-1" aria-label="Date" />
+                  <input type="date" value={e.date} onChange={(ev) => update({ date: ev.target.value })} className="field py-1 font-mono text-[0.875rem]" aria-label="Date" />
                   {/* A range is editable wherever it came from. Extraction finds "Oct 20-21" on
                       its own, but a student recovering that line from the read report, or adding
                       a break by hand, arrives with a single day and used to have no way to
@@ -54,7 +54,7 @@ export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?:
                         value={e.endDate}
                         min={e.date || undefined}
                         onChange={(ev) => update({ endDate: ev.target.value || undefined })}
-                        className="field py-1"
+                        className="field py-1 font-mono text-[0.875rem]"
                         aria-label="Last day"
                       />
                       <button
@@ -80,7 +80,7 @@ export function ReviewTable({ course, rows, dispatch }: { course: Course; rows?:
                   )}
                 </td>
                 <td className="cell-time px-2 py-1.5 align-top">
-                  <input type="time" value={e.time ?? ''} onChange={(ev) => update({ time: ev.target.value || undefined })} className="field py-1" aria-label="Time" />
+                  <input type="time" value={e.time ?? ''} onChange={(ev) => update({ time: ev.target.value || undefined })} className="field py-1 font-mono text-[0.875rem]" aria-label="Time" />
                 </td>
                 <td className="cell-title px-2 py-1.5 align-top">
                   <div className="clearable">

@@ -30,6 +30,9 @@ export const DEMO_TERM: Term = termFromText(SAMPLE_TEXT) ?? defaultTerm()
 /** Milliseconds a line holds before the next one arrives. Reading speed, not machine speed. */
 const STEP = 190
 
+/** The colour square beside each found row, cycling through the picture's joy colours. */
+const DOT = ['bg-joy-2', 'bg-joy-4', 'bg-joy-3', 'bg-accent']
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 /** ISO to something a student reads, without asking the browser's locale what it thinks. */
@@ -154,7 +157,7 @@ export function ExtractDemo({ onSample }: { onSample?: () => void }) {
 
   return (
     <section aria-labelledby="demo-heading">
-      <h2 id="demo-heading" className="text-center font-display text-3xl sm:text-4xl">
+      <h2 id="demo-heading" className="h2 text-center">
         Watch it read one
       </h2>
       <p className="lede mx-auto mt-2 text-center">
@@ -187,9 +190,10 @@ export function ExtractDemo({ onSample }: { onSample?: () => void }) {
           <p className="eyebrow">What it found</p>
           <div ref={rowScroller} className="mt-3 h-[19.25rem] overflow-hidden sm:h-[24.5rem]">
             <ul aria-label="What it found">
-              {visible.map((r) => (
+              {visible.map((r, i) => (
                 <li key={r.key} className="pop-in flex h-7 items-center gap-3 text-[0.9375rem]">
-                  <span className="w-20 shrink-0 font-semibold text-accent tabular-nums">
+                  <span className={`dot ${DOT[i % DOT.length]}`} aria-hidden="true" />
+                  <span className="w-[5.25rem] shrink-0 whitespace-nowrap font-mono text-[0.8125rem] font-medium text-accent">
                     {dateLabel(r.date, r.endDate)}
                   </span>
                   <span className="min-w-0 flex-1 truncate">{r.title}</span>

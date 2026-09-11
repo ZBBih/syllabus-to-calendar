@@ -75,7 +75,7 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
                 role="tab"
                 aria-selected={on}
                 onClick={() => dispatch({ type: 'setActive', id: c.id })}
-                className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition ${
+                className={`flex shrink-0 items-center gap-1.5 rounded-[0.625rem] border px-3 py-1.5 text-sm transition ${
                   on ? 'border-accent bg-accent text-accent-ink font-semibold' : 'border-line-strong bg-elev text-fg hover:border-muted'
                 }`}
               >
@@ -102,8 +102,8 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
 
       <ChangeSummary course={active} dispatch={dispatch} />
 
-      <div className="card mt-4 p-4 sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+      <div className="card mt-4 overflow-hidden">
+        <div className="strip flex flex-wrap items-center gap-1.5 px-4 py-3 text-xs sm:px-5">
           <span className="mr-auto text-sm text-muted">
             {/* While the queue is up the list is not the active class, so the count must not
                 claim to describe it. */}
@@ -123,21 +123,23 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
               </>
             )}
           </span>
-          <button type="button" aria-pressed={allLit} onClick={() => selectAll(true)} className={`btn btn-sm ${allLit ? 'btn-primary' : 'btn-secondary'}`}>
-            All
-          </button>
-          <button type="button" aria-pressed={noneLit} onClick={() => selectAll(false)} className={`btn btn-sm ${noneLit ? 'btn-primary' : 'btn-secondary'}`}>
-            None
-          </button>
-          <button
-            type="button"
-            aria-pressed={needsCheck}
-            disabled={queueTotal === 0 && !needsCheck}
-            onClick={() => setNeedsCheck((v) => !v)}
-            className={`btn btn-sm ${needsCheck ? 'btn-primary' : 'btn-secondary'}`}
-          >
-            Needs check {queueTotal > 0 && `(${queueTotal})`}
-          </button>
+          <div className="segmented">
+            <button type="button" aria-pressed={allLit} onClick={() => selectAll(true)} className={`btn btn-sm ${allLit ? 'btn-primary' : 'btn-secondary'}`}>
+              All
+            </button>
+            <button type="button" aria-pressed={noneLit} onClick={() => selectAll(false)} className={`btn btn-sm ${noneLit ? 'btn-primary' : 'btn-secondary'}`}>
+              None
+            </button>
+            <button
+              type="button"
+              aria-pressed={needsCheck}
+              disabled={queueTotal === 0 && !needsCheck}
+              onClick={() => setNeedsCheck((v) => !v)}
+              className={`btn btn-sm ${needsCheck ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              Needs check {queueTotal > 0 && `(${queueTotal})`}
+            </button>
+          </div>
           <button type="button" onClick={() => dispatch({ type: 'addEvent', courseId: active.id })} className="btn btn-secondary btn-sm">
             <Plus size={13} /> Row
           </button>
@@ -150,26 +152,28 @@ export function ReviewStep({ state, dispatch }: { state: State; dispatch: Dispat
             </button>
           )}
         </div>
-        {needsCheck ? (
-          queue.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">Every row has a date and a title, and none of them are in doubt.</p>
+        <div className="px-4 pb-4 pt-3 sm:px-5">
+          {needsCheck ? (
+            queue.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted">Every row has a date and a title, and none of them are in doubt.</p>
+            ) : (
+              <div className="space-y-4">
+                {queue.map((g) => (
+                  <div key={g.course.id}>
+                    {courses.length > 1 && (
+                      <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                        {g.course.name.trim() || 'Unnamed class'} <span className="pill pill-warn ml-1">{g.rows.length}</span>
+                      </h3>
+                    )}
+                    <ReviewTable course={g.course} rows={g.rows} dispatch={dispatch} />
+                  </div>
+                ))}
+              </div>
+            )
           ) : (
-            <div className="space-y-4">
-              {queue.map((g) => (
-                <div key={g.course.id}>
-                  {courses.length > 1 && (
-                    <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                      {g.course.name.trim() || 'Unnamed class'} <span className="pill pill-warn ml-1">{g.rows.length}</span>
-                    </h3>
-                  )}
-                  <ReviewTable course={g.course} rows={g.rows} dispatch={dispatch} />
-                </div>
-              ))}
-            </div>
-          )
-        ) : (
-          <ReviewTable course={active} rows={active.events} dispatch={dispatch} />
-        )}
+            <ReviewTable course={active} rows={active.events} dispatch={dispatch} />
+          )}
+        </div>
       </div>
 
       <GradePanel course={active} dispatch={dispatch} />
