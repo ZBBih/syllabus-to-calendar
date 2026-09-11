@@ -127,12 +127,10 @@ export default function Home() {
         c.name.trim() !== "" || c.text.trim() !== "" || c.events.length > 0,
     );
 
-  // The top bar. On the front page it sits inside the green, so the page opens as one canvas
-  // from the very top edge; on the working screens it sits on the paper above them.
+  // The top bar: a clear, rounded strip that floats over the page and stays put as you scroll,
+  // so the way home and the theme switch are always in reach without a solid band on top.
   const topBar = (
-    <header
-      className={`flex items-center justify-between gap-3 ${onLanding ? "py-4 sm:py-5" : "mb-8 pt-5"}`}
-    >
+    <header className="sticky top-3 z-40 mb-8 flex items-center justify-between gap-3 rounded-full border border-line bg-bg/75 py-2 pl-3 pr-2 backdrop-blur-md sm:pl-4 sm:pr-2.5">
       {/* The mark always goes home, whatever step you are on. */}
       <button
         type="button"
@@ -164,11 +162,11 @@ export default function Home() {
 
   return (
     <main
-      className={`mx-auto px-4 pb-24 sm:px-6 ${onLanding ? "max-w-7xl" : "max-w-5xl"}`}
+      className={`mx-auto px-4 pb-24 pt-3 sm:px-6 ${onLanding ? "max-w-7xl" : "max-w-5xl"}`}
     >
       <SwRegister />
 
-      {!onLanding && topBar}
+      {topBar}
 
       {storageBlocked && !onLanding && (
         <div role="alert" className="note note-warn rise mb-6">
@@ -177,7 +175,7 @@ export default function Home() {
         </div>
       )}
 
-      {state.step === 0 && <Landing dispatch={dispatch} topBar={topBar} />}
+      {state.step === 0 && <Landing dispatch={dispatch} />}
       {state.step === 1 && <UploadStep state={state} dispatch={dispatch} />}
       {state.step === 2 && <ReviewStep state={state} dispatch={dispatch} />}
       {state.step === 3 && (
