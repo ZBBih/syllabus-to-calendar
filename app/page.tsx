@@ -44,7 +44,10 @@ export default function Home() {
     const saved = load();
     if (saved) {
       skipSave.current = true;
-      dispatch({ type: "hydrate", state: saved });
+      // The link always opens on the front page. The classes come back with it and are one
+      // click away in the bar; what does not come back is the screen the visitor left on,
+      // because a shared link that lands on someone's review table is not a front door.
+      dispatch({ type: "hydrate", state: { ...saved, step: 0 } });
     }
     hydrated.current = true;
   }, []);
@@ -152,7 +155,7 @@ export default function Home() {
             onClick={() => dispatch({ type: "setStep", step: 1 })}
             className="btn btn-primary btn-sm"
           >
-            Add my syllabi
+            {hasSavedWork ? "Back to my classes" : "Add my syllabi"}
           </button>
         )}
         {!onLanding && (
