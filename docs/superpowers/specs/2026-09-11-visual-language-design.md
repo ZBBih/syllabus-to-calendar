@@ -1,7 +1,7 @@
 # Syllabify visual language: design (revised)
 
 Date: 2026-09-11
-Status: **approved from a mockup, not yet built.**
+Status: **built 2026-09-11** on `show-the-reader-working`; checked in a browser at 1440 and 390 wide and in both themes.
 Supersedes: `2026-09-10-visual-language-design.md`, whose "dev-tool register" was mocked up on
 2026-09-11 and rejected on sight. That document stays in the tree as the record of the road not
 taken.
@@ -81,11 +81,12 @@ screen needs a decision the mockup does not settle, it gets its own artboard fir
 - Behaviour does not change. The 359 tests should survive; tests asserting on rendered text
   near styling get fixed rather than weakened.
 
-## Open
+## Settled during the build
 
-- Dark-theme hero block colour.
-- Whether `components/how-it-works.tsx` is deleted or left in the tree.
-
-## Next step
-
-Implementation plan with the writing-plans skill, then execute against the mockup.
+- Dark-theme hero block is `#0e4a38`, a deep green; the light accent would not hold white type.
+- The three hero text colours were moved until every pair cleared WCAG AA, computed rather than
+  eyeballed: lede `#eaf7f0` (4.8:1), fine print `#e0f2ea` (4.6:1), and the amber italic gets
+  its own `--hero-amber` (`#f7cd6e`, 3.5:1 at display size) rather than `--joy-2`, which sat
+  just under 3:1 on the light block.
+- `components/how-it-works.tsx` is deleted.
+- The white button on the block takes the block's own green as ink, so it reads in both themes.

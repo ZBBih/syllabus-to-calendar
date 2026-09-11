@@ -66,10 +66,10 @@ export function Landing({ dispatch }: { dispatch: Dispatch<Action> }) {
 
   return (
     <div className="step-enter">
-      <section className="block block-hero grid items-center gap-8 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:px-16 lg:py-16">
+      <section className="block block-hero grid items-center gap-8 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.25fr_1fr] lg:gap-10 lg:px-12 lg:py-16">
         <div>
           <h1 className="h-display">
-            Your whole semester, on your calendar, <em className="text-joy-2">in one minute.</em>
+            Your whole semester, on your calendar, <em className="text-hero-amber">in one minute.</em>
           </h1>
           <p className="mt-6 max-w-[42ch] text-[1.0625rem] leading-relaxed text-hero-muted sm:text-lg">
             Drop the syllabi your professors handed out. Every deadline, exam and class time gets
