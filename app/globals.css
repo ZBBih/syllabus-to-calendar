@@ -116,6 +116,9 @@
 
 html {
   color-scheme: light;
+  /* The hero runs to the screen's edges below; clipping here is what keeps a scrollbar's
+     width from turning that into a sideways scroll. */
+  overflow-x: clip;
 }
 html.dark {
   color-scheme: dark;
@@ -133,6 +136,28 @@ body {
   }
 }
 
+/*
+  Paper grain. A fixed sheet of noise over the whole page, faint enough to read as the tooth
+  of the stock rather than as dirt. It is one SVG turbulence filter written straight into the
+  stylesheet, so it costs no request and no image, and one compositor layer that never
+  repaints. Dark ink on the light paper, light ink on the dark, so it always shows as matte.
+  It sits above everything, including sheets; grain on glass is still grain.
+*/
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+}
+.dark body::before {
+  opacity: 0.11;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 ::selection {
   background: var(--accent-soft);
   color: var(--fg);
@@ -141,6 +166,17 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes rise {
@@ -309,7 +345,7 @@ body {
   .h-display {
     font-family: var(--font-display), Georgia, serif;
     font-weight: 400;
-    font-size: clamp(2.75rem, 7vw, 4.25rem);
+    font-size: clamp(2.75rem, 6.5vw, 5rem);
     line-height: 0.98;
     letter-spacing: -0.025em;
     text-wrap: balance;
@@ -383,6 +419,31 @@ body {
     animation-delay: 100ms;
   }
 
+  /*
+    Arriving on scroll. A .reveal starts a little low and faint and settles when the Reveal
+    component marks it in view; the children of a .reveal-group inside it settle one after
+    another. Where the setting asks for less motion the block below shows them all at once.
+  */
+  .reveal.is-out {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .reveal.is-in {
+    animation: reveal-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .reveal.is-out .reveal-group > * {
+    opacity: 0;
+  }
+  .reveal.is-in .reveal-group > * {
+    animation: reveal-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .reveal.is-in .reveal-group > *:nth-child(2) {
+    animation-delay: 90ms;
+  }
+  .reveal.is-in .reveal-group > *:nth-child(3) {
+    animation-delay: 180ms;
+  }
+
   .card {
     background: var(--elev);
     border: 1px solid var(--line);
@@ -409,6 +470,19 @@ body {
   }
   .block-soft {
     background: var(--accent-soft);
+  }
+  /*
+    A block that leaves the page column and runs to both edges of the screen. The negative
+    margin is what pulls it out; the root clips sideways (see html above) so the scrollbar's
+    width can never turn into a horizontal scroll. Below the desktop breakpoint it is an
+    ordinary block.
+  */
+  @media (min-width: 1024px) {
+    .bleed {
+      width: 100vw;
+      margin-inline: calc(50% - 50vw);
+      border-radius: 0;
+    }
   }
   /* Ink on the white button is the block's own green, so it holds up in both themes. */
   .btn-on-hero {
@@ -549,11 +623,13 @@ body {
   .lift {
     transition:
       transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.18s ease;
+      border-color 0.18s ease,
+      box-shadow 0.18s ease;
   }
   .lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-3px);
     border-color: color-mix(in oklab, var(--accent) 45%, var(--line));
+    box-shadow: 0 10px 24px -14px color-mix(in oklab, var(--fg) 45%, transparent);
   }
 
   .pop-in {
@@ -600,7 +676,7 @@ body {
     stroke-dashoffset: 240;
     animation: draw-arrow 0.9s cubic-bezier(0.4, 0, 0.3, 1) both;
   }
-  /* Plays once and settles. A loop that never stops pulls the eye off the button. */
+  /* Plays through, rests, and plays again; the component remounts it on a timer. */
   .hero-art .art-chip {
     animation: fly-across 1.5s cubic-bezier(0.4, 0, 0.3, 1) 1 both;
   }
@@ -843,6 +919,16 @@ body {
     .icon-btn,
     .lift {
       transition: none;
+    }
+    .reveal,
+    .reveal.is-in,
+    .reveal.is-in .reveal-group > * {
+      animation: none !important;
+    }
+    .reveal.is-out,
+    .reveal.is-out .reveal-group > * {
+      opacity: 1;
+      transform: none;
     }
     .btn:active:not(:disabled),
     .lift:hover,
