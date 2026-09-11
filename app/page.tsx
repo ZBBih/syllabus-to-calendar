@@ -123,7 +123,7 @@ export default function Home() {
     state.courses.some((c) => c.name.trim() !== '' || c.text.trim() !== '' || c.events.length > 0)
 
   return (
-    <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 sm:px-6">
+    <main className="mx-auto max-w-7xl px-4 pb-24 pt-5 sm:px-6">
       <SwRegister />
 
       <header className="mb-8 flex items-center justify-between gap-3">
