@@ -146,6 +146,15 @@ export default function Home() {
         </span>
       </button>
       <div className="flex items-center gap-2 sm:gap-4">
+        {onLanding && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "setStep", step: 1 })}
+            className="btn btn-primary btn-sm"
+          >
+            Add my syllabi
+          </button>
+        )}
         {!onLanding && (
           <Stepper
             current={state.step}
@@ -162,7 +171,7 @@ export default function Home() {
 
   return (
     <main
-      className={`mx-auto px-4 pb-24 pt-3 sm:px-6 ${onLanding ? "max-w-7xl" : "max-w-5xl"}`}
+      className={`mx-auto px-4 pb-24 pt-3 sm:px-6 ${onLanding ? "max-w-[90rem]" : "max-w-5xl"}`}
     >
       <SwRegister />
 
