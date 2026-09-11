@@ -214,6 +214,19 @@ body {
     transform: translate(132px, -28px) scale(0.75);
   }
 }
+@keyframes draw-arrow {
+  from {
+    stroke-dashoffset: 240;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
 @keyframes grow-line {
   from {
     transform: scaleX(0);
@@ -570,6 +583,11 @@ body {
     transform-origin: 28px center;
     animation: grow-line 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+  /* Each path draws itself just ahead of the date that flies along it. */
+  .hero-art .art-arrow {
+    stroke-dashoffset: 240;
+    animation: draw-arrow 0.9s cubic-bezier(0.4, 0, 0.3, 1) both;
+  }
   /* Plays once and settles. A loop that never stops pulls the eye off the button. */
   .hero-art .art-chip {
     animation: fly-across 1.5s cubic-bezier(0.4, 0, 0.3, 1) 1 both;
@@ -587,7 +605,7 @@ body {
     arithmetic the component used to compute: a sheet line every 90ms, a date leaving 430ms
     after the one before it once the paper has landed, and a calendar day filling 260ms after
     the date ahead of it arrives. One rule per index, so the count here has to match
-    SHEET_LINES and FILLED in lib/art.ts — art.test.ts fails if it drifts.
+    SHEET_LINES, ARROWS and FILLED in lib/art.ts, and art.test.ts fails if it drifts.
   */
   .hero-art .art-line-0 { animation-delay: 0ms; }
   .hero-art .art-line-1 { animation-delay: 90ms; }
@@ -595,6 +613,9 @@ body {
   .hero-art .art-line-3 { animation-delay: 270ms; }
   .hero-art .art-line-4 { animation-delay: 360ms; }
   .hero-art .art-line-5 { animation-delay: 450ms; }
+  .hero-art .art-arrow-0 { animation-delay: 300ms; }
+  .hero-art .art-arrow-1 { animation-delay: 730ms; }
+  .hero-art .art-arrow-2 { animation-delay: 1160ms; }
   .hero-art .art-chip-0 { animation-delay: 350ms; }
   .hero-art .art-chip-1 { animation-delay: 780ms; }
   .hero-art .art-chip-2 { animation-delay: 1210ms; }
@@ -777,6 +798,7 @@ body {
     .ring-once,
     .float,
     .hero-art .art-line,
+    .hero-art .art-arrow,
     .hero-art .art-chip,
     .hero-art .art-cell,
     .crop-in,
@@ -795,6 +817,10 @@ body {
     .hero-art .art-cell {
       opacity: 1;
       transform: none;
+    }
+    .hero-art .art-arrow {
+      opacity: 1;
+      stroke-dashoffset: 0;
     }
     .crop-in {
       opacity: 1;

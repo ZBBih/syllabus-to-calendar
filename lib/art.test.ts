@@ -2,9 +2,12 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  ARROWS,
   ART_HEIGHT,
   ART_WIDTH,
   CAL,
+  HERO_INK,
+  JOY,
   CHIP,
   CROP,
   FILLED,
@@ -62,6 +65,20 @@ describe("the illustration", () => {
     );
   });
 
+  it("draws one arrow per date in flight, each leaving the sheet and reaching the calendar", () => {
+    expect(ARROWS).toHaveLength(3);
+    for (const a of ARROWS) {
+      const nums = a.d.match(/-?\d+(\.\d+)?/g)!.map(Number);
+      expect(nums[0]).toBeGreaterThanOrEqual(SHEET.x + SHEET.w);
+      expect(nums[nums.length - 2]).toBeLessThanOrEqual(CAL.x);
+    }
+  });
+
+  it("has three joy colours, one per date in flight, and an arrow ink for the green ground", () => {
+    expect(JOY).toHaveLength(3);
+    expect(HERO_INK.arrow).toBeTruthy();
+  });
+
   it("crops onto the drawing, not past it", () => {
     for (const box of Object.values(CROP)) {
       const [x, y, w, h] = box.split(" ").map(Number);
@@ -86,6 +103,7 @@ describe("the illustration", () => {
     );
     const expected = [
       ...SHEET_LINES.map((_, i) => [`art-line-${i}`, i * 90] as const),
+      ...[0, 1, 2].map((i) => [`art-arrow-${i}`, 300 + i * 430] as const),
       ...[0, 1, 2].map((i) => [`art-chip-${i}`, 350 + i * 430] as const),
       ...FILLED.map((f) => [`art-cell-${f.order}`, 900 + f.order * 260] as const),
     ];
@@ -95,7 +113,7 @@ describe("the illustration", () => {
       );
     }
     // And no rule for a shape that does not exist, so a removed one does not linger.
-    const declared = [...css.matchAll(/\.hero-art \.(art-(?:line|chip|cell)-\d+) \{/g)].map(
+    const declared = [...css.matchAll(/\.hero-art \.(art-(?:line|chip|cell|arrow)-\d+) \{/g)].map(
       (m) => m[1],
     );
     expect(declared.sort()).toEqual(expected.map(([c]) => c).sort());
