@@ -149,12 +149,12 @@ body::before {
   inset: 0;
   z-index: 200;
   pointer-events: none;
-  opacity: 0.055;
+  opacity: 0.11;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 240px 240px;
 }
 .dark body::before {
-  opacity: 0.11;
+  opacity: 0.16;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -474,16 +474,44 @@ body::before {
   /*
     A block that leaves the page column and runs to both edges of the screen. The negative
     margin is what pulls it out; the root clips sideways (see html above) so the scrollbar's
-    width can never turn into a horizontal scroll. Below the desktop breakpoint it is an
-    ordinary block.
+    width can never turn into a horizontal scroll.
   */
+  .bleed {
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
+
+  /*
+    The green canvas the front page opens on: top bar and hero in one, from the top edge of
+    the page. A soft glow sits behind the picture so the colour has depth rather than being a
+    flat slab, and the bottom corners round off so it reads as a shape hung from the top.
+    Everything inside takes the hero's ink: the mark, the icons and the theme switch.
+  */
+  .hero-band {
+    border-radius: 0 0 1.5rem 1.5rem;
+    background:
+      radial-gradient(
+        70% 90% at 78% 20%,
+        color-mix(in oklab, var(--accent-glow) 28%, transparent),
+        transparent 70%
+      ),
+      var(--hero);
+    --logo-bg: var(--hero-ink);
+    --logo-fg: var(--hero);
+  }
   @media (min-width: 1024px) {
-    .bleed {
-      width: 100vw;
-      margin-inline: calc(50% - 50vw);
-      border-radius: 0;
+    .hero-band {
+      border-radius: 0 0 2.5rem 2.5rem;
     }
   }
+  .hero-band .icon-btn {
+    color: var(--hero-muted);
+  }
+  .hero-band .icon-btn:hover {
+    color: var(--hero-ink);
+    background: color-mix(in oklab, var(--hero-ink) 14%, transparent);
+  }
+
   /* Ink on the white button is the block's own green, so it holds up in both themes. */
   .btn-on-hero {
     background: var(--hero-ink);
@@ -1073,4 +1101,23 @@ body::before {
       border-top: 1px solid var(--line);
     }
   }
+}
+
+/*
+  The theme switch on the green. These sit outside the layers on purpose: the control is
+  styled with utilities, and only an unlayered rule outranks those.
+*/
+.hero-band [role="radiogroup"] {
+  border-color: color-mix(in oklab, var(--hero-ink) 32%, transparent);
+  background: color-mix(in oklab, var(--hero-ink) 10%, transparent);
+}
+.hero-band [role="radio"][aria-checked="false"] {
+  color: var(--hero-muted);
+}
+.hero-band [role="radio"][aria-checked="false"]:hover {
+  color: var(--hero-ink);
+}
+.hero-band [role="radio"][aria-checked="true"] {
+  background: var(--hero-ink);
+  color: var(--hero);
 }
