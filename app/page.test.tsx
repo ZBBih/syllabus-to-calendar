@@ -204,6 +204,13 @@ describe("the offline invitation", () => {
     expect(await screen.findByText(/airplane mode/i)).toBeTruthy();
   });
 
+  it("opens in a browser with no service worker container, like an in-app web view", async () => {
+    Object.defineProperty(navigator, "serviceWorker", { configurable: true, get: () => undefined });
+    render(<Home />);
+    await screen.findByRole("button", { name: /syllabify home/i });
+    expect(screen.queryByText(/airplane mode/i)).toBeNull();
+  });
+
   it("stays quiet until the worker is actually in control", async () => {
     withController(null);
     render(<Home />);
