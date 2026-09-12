@@ -74,9 +74,15 @@ export default function Home() {
 
   // Only claim the app works offline once the worker is actually in control; before that the
   // shell and the recogniser may not be cached and the invitation would be a lie.
+  //
+  // The container is missing altogether inside another app's web view: LinkedIn's in-app
+  // browser on iOS has no `navigator.serviceWorker`. Asking with `in` matters, because the
+  // production minifier treats the property as always present and deletes a plain `if (!sw)`
+  // guard, which is how the page crashed for everyone who tapped the launch post.
   useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
     const sw = navigator.serviceWorker;
-    if (!sw) return;
+    if (typeof sw !== "object" || sw === null) return;
     const update = () => setOfflineReady(Boolean(sw.controller));
     update();
     sw.addEventListener("controllerchange", update);
