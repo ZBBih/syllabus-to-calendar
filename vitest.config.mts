@@ -10,6 +10,9 @@ export default defineConfig({
       mammoth: path.resolve(import.meta.dirname, 'node_modules/mammoth/mammoth.browser.js'),
     },
   },
+  // The root error page imports the stylesheet so it can wear the app's own classes. Nothing a
+  // test checks is a colour, and loading Tailwind's PostCSS plugin for it is what breaks.
+  css: { postcss: {} },
   test: {
     include: ['lib/**/*.test.ts', 'components/**/*.test.tsx', 'app/**/*.test.tsx'],
     environment: 'node',
