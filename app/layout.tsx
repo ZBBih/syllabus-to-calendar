@@ -10,6 +10,9 @@ const display = Instrument_Serif({ variable: '--font-display', subsets: ['latin'
 const body = Geist({ variable: '--font-body', subsets: ['latin'] })
 
 const title = 'Syllabify'
+// What a shared link says for itself. A LinkedIn or Slack card shows this line above the domain
+// and nothing else of the page, so the name alone reads as a word, not a product.
+const cardTitle = 'Syllabify: your whole semester on your calendar in one minute'
 const description =
   'Drop your syllabi and get every deadline on your calendar. No account, no class limit, and the file never leaves your device.'
 
@@ -21,8 +24,8 @@ export const metadata: Metadata = {
   applicationName: title,
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, title, statusBarStyle: 'default' },
-  openGraph: { title, description, siteName: title, type: 'website' },
-  twitter: { card: 'summary_large_image', title, description },
+  openGraph: { title: cardTitle, description, siteName: title, type: 'website' },
+  twitter: { card: 'summary_large_image', title: cardTitle, description },
 }
 
 export const viewport: Viewport = {
